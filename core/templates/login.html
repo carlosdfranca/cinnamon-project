@@ -1,16 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h2>Login</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Entrar</button>
-    </form>
-</body>
-</html>
+{% extends 'base/base.html' %}
+
+{% load static %}   
+
+{% block title %}Login{% endblock %}
+
+{% block conteudo %}
+<div class="container-fluid login-container d-flex justify-content-center align-items-center">
+    <div class="login-card text-center">
+        <img src="{% static 'img/logo_empresa.png' %}" alt="Logo da Empresa" class="brand-logo" style="max-width: 160px; height: auto;">
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            <div class="mb-3 text-start">
+                <label for="username" class="form-label">Usuário</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-4 text-start">
+                <label for="password" class="form-label">Senha</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+
+            {% if form.errors %}
+            <div class="alert alert-danger mt-3 mb-0" role="alert">
+                Usuário ou senha inválidos.
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

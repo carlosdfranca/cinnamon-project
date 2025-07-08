@@ -1,0 +1,154 @@
+/* ========================
+   ESTILO BASE CORPORATIVO
+   ======================== */
+
+/* === Variáveis principais === */
+:root {
+    --cor-principal: #B86231;
+    --cor-principal-hover: #7b4322;
+    --cor-secundaria: #32B889;
+    --cor-danger: #dc3545;
+    --cor-success: #198754;
+    --cinza-claro: #f8f9fa;
+    --cinza-medio: #9c9fa1;
+    --cinza-escuro: #2B3438;
+    --texto-claro: #ffffff;
+    --texto-escuro: #2B3834;
+}
+
+/* === Reset básico === */
+body {
+    background-color: var(--cor-secundaria);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--texto-escuro);
+    margin: 0;
+}
+
+/* === Botões === */
+.btn-primary {
+    background-color: var(--cor-principal);
+    border-color: var(--cor-principal);
+    color: var(--texto-claro);
+}
+.btn-primary:hover {
+    background-color: var(--cor-principal-hover);
+    border-color: var(--cor-principal-hover);
+}
+
+.btn-secondary {
+    background-color: var(--cinza-escuro);
+    border-color: var(--cinza-escuro);
+    color: var(--texto-claro);
+}
+.btn-secondary:hover {
+    background-color: #565e64;
+    border-color: #565e64;
+}
+
+.btn-danger {
+    background-color: var(--cor-danger);
+    border-color: var(--cor-danger);
+    color: var(--texto-claro);
+}
+.btn-danger:hover {
+    background-color: #bb2d3b;
+    border-color: #b02a37;
+}
+
+/* === Cartões === */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    background-color: var(--texto-claro);
+}
+
+/* === Formulários === */
+.form-control {
+    border-radius: 6px;
+    border: 1px solid var(--cinza-medio);
+}
+.form-control:focus {
+    border-color: var(--cor-principal);
+    box-shadow: 0 0 0 0.2rem rgba(0,77,153,0.25);
+}
+label {
+    font-weight: 500;
+}
+
+/* === Tabelas === */
+.table {
+    border-collapse: collapse;
+    background-color: var(--texto-claro);
+}
+.table th {
+    background-color: var(--cor-principal);
+    color: var(--texto-claro);
+    font-weight: 600;
+}
+.table td, .table th {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: 1px solid var(--cinza-medio);
+}
+.table-hover tbody tr:hover {
+    background-color: var(--cinza-claro);
+}
+
+/* === Alerts === */
+.alert-success {
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+    color: #0f5132;
+}
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    color: #842029;
+}
+.alert-info {
+    background-color: #cff4fc;
+    border-color: #b6effb;
+    color: #055160;
+}
+
+/* === Espaçamento padrão === */
+.mt-4 { margin-top: 1.5rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+.pt-4 { padding-top: 1.5rem !important; }
+.pb-4 { padding-bottom: 1.5rem !important; }
+
+/* === Login específico === */
+.login-card {
+    max-width: 400px;
+    padding: 2rem;
+    background-color: var(--texto-claro);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.login-container {
+    min-height: 100vh;; /* ou a cor que você quiser como fundo */
+}
+
+/* === Logo da marca === */
+.brand-logo {
+    max-width: 60px; /* ou o tamanho que preferir */
+    height: auto;
+    margin-bottom: 2rem;
+}
+
+/* === Grid interno para conteúdo de páginas === */
+.pagina-conteudo {
+    padding: 2rem;
+    background-color: var(--texto-claro);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+
+@media (max-width: 576px) {
+    .brand-logo {
+        max-width: 40px;
+    }
+}
