@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Editar Perfil{% endblock %}
+
+{% block conteudo %}
+<!-- Navbar -->
+{% include 'base/navbar.html' %}
+<div class="container py-5">
+    <div class="card p-4 shadow-sm">
+        <h4 class="mb-4">Editar Perfil</h4>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="first_name" class="form-label">Nome</label>
+                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ request.user.first_name }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">E-mail</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ request.user.email }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="cpf" class="form-label">CPF</label>
+                <input type="text" class="form-control" id="cpf" name="cpf" value="{{ request.user.cpf }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Nova Senha (opcional)</label>
+                <input type="password" class="form-control" id="password" name="password">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

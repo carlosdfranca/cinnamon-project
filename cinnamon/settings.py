@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'corsheaders',
+    'usuarios', 
 ]
 
 MIDDLEWARE = [
@@ -144,3 +145,6 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+
+AUTH_USER_MODEL = 'usuarios.Usuario'

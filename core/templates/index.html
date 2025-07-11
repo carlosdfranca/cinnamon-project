@@ -1,15 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Esse vai ser meu index</h1>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Sair</button>
+{% extends 'base/base.html' %}
+
+{% load static %}
+
+{% block title %}Homepage{% endblock %}
+
+{% block conteudo %}
+
+<!-- Navbar -->
+{% include 'base/navbar.html' %}
+
+
+<div class="container py-5">
+  <div class="card shadow-sm p-4">
+    <h5 class="mb-3">Importar planilha</h5>
+    <form method="POST" enctype="multipart/form-data" action="{% url 'importar_planilha' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <input type="file" name="planilha" accept=".xlsx,.xls,.csv" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Enviar</button>
     </form>
-</body>
-</html>
+  </div>
+</div>
+
+{% endblock %}

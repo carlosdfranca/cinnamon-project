@@ -6,12 +6,13 @@
 :root {
     --cor-principal: #B86231;
     --cor-principal-hover: #7b4322;
-    --cor-secundaria: #32B889;
+    --cor-secundaria: #19535F;
+    --cor-terciária: #0B7A75;
     --cor-danger: #dc3545;
     --cor-success: #198754;
-    --cinza-claro: #f8f9fa;
-    --cinza-medio: #9c9fa1;
-    --cinza-escuro: #2B3438;
+    --cinza-claro: #F7F3E3;
+    --cinza-medio: #C1BDB3;
+    --cinza-escuro: #939088;
     --texto-claro: #ffffff;
     --texto-escuro: #2B3834;
 }
@@ -121,19 +122,20 @@ label {
 /* === Login específico === */
 .login-card {
     max-width: 400px;
+    width: 100%;
     padding: 2rem;
-    background-color: var(--texto-claro);
+    background-color: var(--cinza-claro);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .login-container {
-    min-height: 100vh;; /* ou a cor que você quiser como fundo */
+    min-height: 100vh;
 }
 
 /* === Logo da marca === */
 .brand-logo {
-    max-width: 60px; /* ou o tamanho que preferir */
+    max-width: 60px;
     height: auto;
     margin-bottom: 2rem;
 }
@@ -146,7 +148,32 @@ label {
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
+/* === Navbar === */
+nav {
+    background-color: var(--cinza-claro);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
 
+nav .dropdown-menu {
+    background-color: var(--cinza-claro)
+}
+
+nav .dropdown-item {
+    background-color: var(--cinza-claro);
+}
+
+nav .dropdown-item:hover {
+    background-color: var(--cinza-medio);
+}
+
+/* === Card === */
+.card {
+    background-color: var(--cinza-claro);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* === Responsividade === */
 @media (max-width: 576px) {
     .brand-logo {
         max-width: 40px;

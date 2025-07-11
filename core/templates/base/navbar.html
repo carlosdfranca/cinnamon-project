@@ -1,0 +1,29 @@
+{% load static %}
+
+<nav class="navbar navbar-expand-lg border-bottom px-4 py-2">
+  <a class="navbar-brand fw-bold text-dark" href="{% url 'index' %}">
+    <img src="{% static 'img/logo_empresa.png' %}" alt="Logo" class="me-2" style="height: 32px;">
+  </a>
+
+  <div class="ms-auto dropdown">
+    <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="perfilDropdown"
+      data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-person-circle me-2"></i> {{ request.user.first_name|default:request.user.username }}
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="perfilDropdown">
+      <li>
+        <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'editar_perfil' %}">
+          Editar Perfil <i class="bi bi-person-fill-gear ms-2"></i>
+        </a>
+      </li>
+      <li>
+        <form method="POST" action="{% url 'logout' %}" id="logout-form">
+          {% csrf_token %}
+          <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center text-danger w-100">
+            Sair <i class="bi bi-box-arrow-right ms-2"></i>
+          </button>
+        </form>
+      </li>
+    </ul>
+  </div>
+</nav>
