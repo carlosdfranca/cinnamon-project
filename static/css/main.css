@@ -170,7 +170,12 @@ nav .dropdown-item:hover {
 .card {
     background-color: var(--cinza-claro);
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 1); /* sombra mais escura, maior e mais espalhada */
 }
 
 /* === Responsividade === */

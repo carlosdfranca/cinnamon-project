@@ -11,16 +11,46 @@
 
 
 <div class="container py-5">
-  <div class="card shadow-sm p-4">
-    <h5 class="mb-3">Importar planilha</h5>
-    <form method="POST" enctype="multipart/form-data" action="{% url 'importar_planilha' %}">
-      {% csrf_token %}
-      <div class="mb-3">
-        <input type="file" name="planilha" accept=".xlsx,.xls,.csv" class="form-control" required>
+  <div class="row justify-content-center g-4">
+    
+    <!-- Card 1: Baixar modelo -->
+    <div class="col-lg-5">
+      <div class="card h-100 text-center">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div>
+            <h5 class="card-title">Baixar planilha modelo</h5>
+            <p class="card-text py-2 fs-6">Clique abaixo para fazer download da planilha modelo com o formato correto para envio.</p>
+          </div>
+          <a href="#" class="btn btn-success mt-3 w-100">
+            Baixar modelo <i class="bi bi-download ms-2"></i>
+          </a>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary">Enviar</button>
-    </form>
+    </div>
+
+    <!-- Card 2: Importar planilha -->
+    <div class="col-lg-5">
+      <div class="card h-100 text-center">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div>
+            <h5 class="card-title">Importar planilha preenchida</h5>
+            <p class="card-text py-2 fs-6">Envie abaixo a planilha já preenchida para processamento.</p>
+          </div>
+          <form method="POST" enctype="multipart/form-data" action="{% url 'importar_planilha' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <input type="file" name="planilha" accept=".xlsx,.xls,.csv" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              Enviar planilha <i class="bi bi-upload ms-2"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
+
 
 {% endblock %}
