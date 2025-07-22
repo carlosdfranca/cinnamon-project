@@ -9,10 +9,14 @@ urlpatterns = [
     path('perfil/', editar_perfil, name='editar_perfil'),
 
     # Index
-    path('', index, name='index'),
+    path('', demosntracao_financeira, name='demosntracao_financeira'),
+
+    # Fundos
+    path('fundos/', listar_fundos, name='listar_fundos'),
+    path('fundos/adicionar/', adicionar_fundo, name='adicionar_fundo'),
+    path('fundos/<int:fundo_id>/editar/', editar_fundo, name='editar_fundo'),
+    path('fundos/<int:fundo_id>/excluir/', excluir_fundo, name='excluir_fundo'),
 
     # Functions
-    path('importar_planilha/', importar_planilha, name='importar_planilha'),
-    # path('process/', views.process_files, name='process_files'),
-    # path('download/', views.download_file, name='download_file'),
-]
+    path('importar_balancete/', importar_balancete, name='importar_balancete'),
+]   

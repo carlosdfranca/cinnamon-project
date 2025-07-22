@@ -1,0 +1,30 @@
+{% extends 'base/base.html' %}
+{% load widget_tweaks %}
+
+
+{% block title %}{{ modo }} Fundo{% endblock %}
+
+{% block conteudo %}
+
+<!-- Navbar -->
+{% include 'base/navbar.html' %}
+
+<div class="container py-5">
+  <div class="card shadow-sm p-4">
+    <h4 class="mb-4">{{ modo }} Fundo</h4>
+    <form method="POST">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_nome" class="form-label">Nome do Fundo</label>
+        {{ form.nome|add_class:"form-control" }}
+      </div>
+      <div class="mb-3">
+        <label for="id_cnpj" class="form-label">CNPJ</label>
+        {{ form.cnpj|add_class:"form-control" }}
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a href="{% url 'listar_fundos' %}" class="btn btn-outline-secondary">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

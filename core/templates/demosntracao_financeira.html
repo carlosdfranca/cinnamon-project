@@ -2,7 +2,7 @@
 
 {% load static %}
 
-{% block title %}Homepage{% endblock %}
+{% block title %}Demonstração Financeira{% endblock %}
 
 {% block conteudo %}
 
@@ -36,7 +36,7 @@
             <h5 class="card-title">Importar planilha preenchida</h5>
             <p class="card-text py-2 fs-6">Envie abaixo a planilha já preenchida para processamento.</p>
           </div>
-          <form method="POST" enctype="multipart/form-data" action="{% url 'importar_planilha' %}">
+          <form method="POST" enctype="multipart/form-data" action="{% url 'importar_balancete' %}">
             {% csrf_token %}
             <div class="mb-3">
               <input type="file" name="planilha" accept=".xlsx,.xls,.csv" class="form-control" required>

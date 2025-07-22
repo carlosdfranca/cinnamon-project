@@ -40,10 +40,8 @@ class MapeamentoContas(models.Model):
 class BalanceteItem(models.Model):
     fundo = models.ForeignKey(Fundo, on_delete=models.SET_NULL, null=True, blank=True)
     ano = models.IntegerField()
-    conta_corrente = models.CharField(max_length=30)
-    descricao = models.CharField(max_length=255)
+    conta_corrente = models.ForeignKey('MapeamentoContas', on_delete=models.SET_NULL, null=True, blank=True)
     saldo_final = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    tipo_conta = models.ForeignKey('MapeamentoContas', on_delete=models.SET_NULL, null=True, blank=True)
 
     data_importacao = models.DateTimeField(auto_now_add=True)
 

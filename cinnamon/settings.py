@@ -27,6 +27,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'usuarios', 
     'df',
+
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
