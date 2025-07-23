@@ -178,6 +178,17 @@ nav .dropdown-item:hover {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 1); /* sombra mais escura, maior e mais espalhada */
 }
 
+/* === Datatables === */
+/* Corrige botão ativo do DataTables */
+
+.dataTables_wrapper .dataTables_paginate .page-item.active .page-link,
+.dataTables_wrapper .dataTables_paginate .page-link.active {
+    background-color: var(--cor-principal) !important;
+    color: var(--cinza-claro) !important;
+    border-color: var(--cor-principal-hover) !important;
+    box-shadow: none !important;
+}
+
 /* === Responsividade === */
 @media (max-width: 576px) {
     .brand-logo {

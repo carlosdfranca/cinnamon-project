@@ -10,47 +10,72 @@
 {% include 'base/navbar.html' %}
 
 
-<div class="container py-5">
-  <div class="row justify-content-center g-4">
-    
-    <!-- Card 1: Baixar modelo -->
-    <div class="col-lg-5">
-      <div class="card h-100 text-center">
-        <div class="card-body d-flex flex-column justify-content-between">
-          <div>
-            <h5 class="card-title">Baixar planilha modelo</h5>
-            <p class="card-text py-2 fs-6">Clique abaixo para fazer download da planilha modelo com o formato correto para envio.</p>
-          </div>
-          <a href="#" class="btn btn-success mt-3 w-100">
-            Baixar modelo <i class="bi bi-download ms-2"></i>
-          </a>
-        </div>
+<div class="container mt-5">
+  {% if fundos %}
+    <div class="card shadow rounded p-4">
+      <h4 class="mb-3">Selecionar Fundo</h4>
+      <select class="form-select" id="select-fundo">
+        <option selected disabled>Escolha um fundo</option>
+        {% for fundo in fundos %}
+          <option value="{{ fundo.id }}">{{ fundo.nome }} ({{ fundo.cnpj }})</option>
+        {% endfor %}
+      </select>
+
+      <div id="df-container" class="mt-4" style="display: none;">
+        <!-- Conteúdo será exibido via JS depois de selecionar o fundo -->
       </div>
     </div>
-
-    <!-- Card 2: Importar planilha -->
-    <div class="col-lg-5">
-      <div class="card h-100 text-center">
-        <div class="card-body d-flex flex-column justify-content-between">
-          <div>
-            <h5 class="card-title">Importar planilha preenchida</h5>
-            <p class="card-text py-2 fs-6">Envie abaixo a planilha já preenchida para processamento.</p>
-          </div>
-          <form method="POST" enctype="multipart/form-data" action="{% url 'importar_balancete' %}">
-            {% csrf_token %}
-            <div class="mb-3">
-              <input type="file" name="planilha" accept=".xlsx,.xls,.csv" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">
-              Enviar planilha <i class="bi bi-upload ms-2"></i>
-            </button>
-          </form>
-        </div>
-      </div>
+  {% else %}
+    <div class="alert alert-warning text-center mt-5">
+      Você ainda não adicionou nenhum fundo.
+      <a href="{% url 'listar_fundos' %}" class="alert-link">Clique aqui para cadastrar seu primeiro fundo.</a>
     </div>
-
-  </div>
+  {% endif %}
 </div>
 
 
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selectFundo = document.getElementById("select-fundo");
+    const container = document.getElementById("df-container");
+
+    if (selectFundo) {
+      selectFundo.addEventListener("change", function () {
+        const fundoId = this.value;
+        container.style.display = "block";
+
+        // Aqui simularíamos uma checagem se o fundo tem DFs ou não
+        // Por enquanto placeholder:
+        container.innerHTML = `
+          <div class="alert alert-info">
+            Nenhuma Demonstração Financeira encontrada para este fundo.
+          </div>
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-2 mb-3">
+                <label for="ano-df" class="form-label">Ano da Demonstração</label>
+                <input type="number" class="form-control" id="ano-df" name="ano" required>
+              </div>
+
+              <div class="col-md-10 mb-3">
+                <label for="arquivo-df" class="form-label">Upload da Planilha</label>
+                <input type="file" class="form-control" id="arquivo-df" name="planilha" accept=".xlsx,.xls" required>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3 mt-3">
+              <a href="#" class="btn btn-success">Baixar DF Modelo <i class="bi bi-file-earmark-excel-fill"></i></a>
+              <button type="submit" class="btn btn-primary">Enviar Demonstração Financeira <i class="bi bi-upload"></i></button>
+            </div>
+          </form>
+        `;
+      });
+    }
+  });
+</script>
 {% endblock %}

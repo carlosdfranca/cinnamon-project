@@ -19,7 +19,13 @@ def demosntracao_financeira(request):
     """
     Página que vai ser responsável para o cliente visualizar as Demonstrações Financeiras que ele Subiu no sistema
     """
-    return render(request, 'demosntracao_financeira.html')
+    fundos = Fundo.objects.filter(usuario=request.user).order_by('nome')
+
+    context = {
+        'fundos': fundos
+    }
+
+    return render(request, 'demosntracao_financeira.html', context)
 
 # Funções para Ver, Editar e Excluir os Fundos
 @login_required
