@@ -8,8 +8,9 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('perfil/', editar_perfil, name='editar_perfil'),
 
-    # Index
-    path('', demosntracao_financeira, name='demosntracao_financeira'),
+    # Demonstração Financeira
+    path('', demonstracao_financeira, name='demonstracao_financeira'),
+    path('download-modelo-balancete/', download_modelo_balancete, name='download_modelo_balancete'),
 
     # Fundos
     path('fundos/', listar_fundos, name='listar_fundos'),
@@ -17,6 +18,4 @@ urlpatterns = [
     path('fundos/<int:fundo_id>/editar/', editar_fundo, name='editar_fundo'),
     path('fundos/<int:fundo_id>/excluir/', excluir_fundo, name='excluir_fundo'),
 
-    # Functions
-    path('importar_balancete/', importar_balancete, name='importar_balancete'),
 ]   

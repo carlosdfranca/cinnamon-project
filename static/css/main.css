@@ -189,6 +189,13 @@ nav .dropdown-item:hover {
     box-shadow: none !important;
 }
 
+/* Corrige estilo da tag 'error' usada por Django */
+.alert-error {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+}
+
 /* === Responsividade === */
 @media (max-width: 576px) {
     .brand-logo {

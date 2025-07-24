@@ -1,31 +1,86 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import FileResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.timezone import now
 
-from df.models import Fundo
+
+from df.models import Fundo, BalanceteItem, MapeamentoContas
+
 from .forms import FundoForm
 
-# Funções
-@login_required
-def importar_balancete(request):
-    """
-    Função que importa a planilha com os dados do balancete do ano que o cliente quer que analisemos.
-    """
-    return render(request, 'importar_balancete.html')
+import os
+import pandas as pd
 
 
+# Funções da Página de Demonstração Financeira
 @login_required
-def demosntracao_financeira(request):
-    """
-    Página que vai ser responsável para o cliente visualizar as Demonstrações Financeiras que ele Subiu no sistema
-    """
+def demonstracao_financeira(request):
     fundos = Fundo.objects.filter(usuario=request.user).order_by('nome')
 
-    context = {
-        'fundos': fundos
-    }
+    if request.method == 'POST':
+        fundo_id = request.POST.get('fundo_id')
+        ano = request.POST.get('ano')
+        arquivo = request.FILES.get('planilha')
 
-    return render(request, 'demosntracao_financeira.html', context)
+        # Validação do ano
+        if not ano:
+            messages.error(request, "O campo Ano é obrigatório.")
+            return render(request, 'demonstracao_financeira.html', {'fundos': fundos})
+
+        try:
+            fundo = Fundo.objects.get(id=fundo_id, usuario=request.user)
+        except Fundo.DoesNotExist:
+            messages.error(request, "Fundo inválido.")
+            return redirect('demonstracao_financeira')
+
+        try:
+            df = pd.read_excel(arquivo)
+        except Exception as e:
+            messages.error(request, f"Erro ao ler o arquivo: {e}")
+            return redirect('demonstracao_financeira')
+
+        importados = 0
+        ignorados = 0
+
+        for _, row in df.iterrows():
+            conta_codigo = str(row['CONTA']).strip()
+            saldo = row['SALDOATUAL']
+
+            try:
+                conta_mapeada = MapeamentoContas.objects.get(conta=conta_codigo)
+                BalanceteItem.objects.create(
+                    fundo=fundo,
+                    ano=int(ano),
+                    conta_corrente=conta_mapeada,
+                    saldo_final=saldo
+                )
+                importados += 1
+            except MapeamentoContas.DoesNotExist:
+                ignorados += 1
+                continue
+
+        messages.success(request, f"Importação concluída: {importados} itens salvos, {ignorados} ignorados.")
+
+        return redirect('demonstracao_financeira')
+
+    return render(request, 'demonstracao_financeira.html', {
+        'fundos': fundos
+    })
+
+
+@login_required
+def download_modelo_balancete(request):
+    caminho_arquivo = os.path.join(settings.STATIC_ROOT, 'modelos', 'modelo_balancete.xlsx')
+    
+    # Se estiver usando DEBUG = True (modo dev), pode usar STATICFILES_DIRS:
+    if settings.DEBUG:
+        caminho_arquivo = os.path.join(settings.BASE_DIR, 'static', 'modelos', 'modelo_balancete.xlsx')
+
+    return FileResponse(open(caminho_arquivo, 'rb'), as_attachment=True, filename='Modelo_DF.xlsx')
+
+
 
 # Funções para Ver, Editar e Excluir os Fundos
 @login_required

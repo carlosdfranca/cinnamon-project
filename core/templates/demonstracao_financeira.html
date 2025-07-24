@@ -11,7 +11,18 @@
 
 
 <div class="container mt-5">
+  {% if messages %}
+    <div class="mt-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags  }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% if fundos %}
+  
     <div class="card shadow rounded p-4">
       <h4 class="mb-3">Selecionar Fundo</h4>
       <select class="form-select" id="select-fundo">
@@ -48,14 +59,15 @@
         const fundoId = this.value;
         container.style.display = "block";
 
-        // Aqui simularíamos uma checagem se o fundo tem DFs ou não
-        // Por enquanto placeholder:
         container.innerHTML = `
           <div class="alert alert-info">
             Nenhuma Demonstração Financeira encontrada para este fundo.
           </div>
+
           <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
+            <input type="hidden" name="csrfmiddlewaretoken" value="${getCSRFToken()}">
+            <input type="hidden" name="fundo_id" value="${fundoId}">
+
             <div class="row">
               <div class="col-md-2 mb-3">
                 <label for="ano-df" class="form-label">Ano da Demonstração</label>
@@ -69,12 +81,29 @@
             </div>
 
             <div class="d-flex justify-content-center gap-3 mt-3">
-              <a href="#" class="btn btn-success">Baixar DF Modelo <i class="bi bi-file-earmark-excel-fill"></i></a>
-              <button type="submit" class="btn btn-primary">Enviar Demonstração Financeira <i class="bi bi-upload"></i></button>
+              <a href="/download-modelo-balancete/" class="btn btn-success">
+                Baixar DF Modelo <i class="bi bi-file-earmark-excel-fill"></i>
+              </a>
+              <button type="submit" class="btn btn-primary">
+                Enviar Demonstração Financeira <i class="bi bi-upload"></i>
+              </button>
             </div>
           </form>
         `;
       });
+    }
+
+    // Pega o CSRF token do cookie
+    function getCSRFToken() {
+      const name = 'csrftoken';
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+          return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      }
+      return '';
     }
   });
 </script>

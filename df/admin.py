@@ -31,8 +31,11 @@ class MapeamentoContasAdmin(admin.ModelAdmin):
 @admin.register(BalanceteItem)
 class BalanceteItemAdmin(admin.ModelAdmin):
     list_display = ('fundo', 'ano', 'conta_corrente', 'saldo_final', 'data_importacao')
-    search_fields = ('conta_corrente', 'descricao')
-    list_filter = ('fundo', 'ano')
+    search_fields = (
+        'fundo__usuario__first_name',
+        'fundo__usuario__last_name',
+        'fundo__nome',
+    ) 
+    list_filter = ('ano', )
     ordering = ('-data_importacao',)
-
     readonly_fields = ('data_importacao',)
