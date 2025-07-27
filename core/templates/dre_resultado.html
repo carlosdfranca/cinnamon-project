@@ -1,55 +1,87 @@
 {% extends 'base/base.html' %}
-
 {% load static %}
 {% load custom_tags %}
 
 {% block title %}Demonstração Financeira{% endblock %}
 
 {% block conteudo %}
-
 <!-- Navbar -->
 {% include 'base/navbar.html' %}
 
 <div class="container mt-4">
   <div class="card shadow rounded p-4">
-    <h3>Demonstração Financeira - {{ ano }}</h3>
-  
-    {% for grupo, subgrupos in dict_tabela.items %}
-      <div class="mt-4">
-        <ul class="list-group">
 
-          <!-- Cabeçalho com o nome do grupo + soma -->
-          <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold">
-            {{ grupo }}
-            <span>{{ subgrupos.SOMA|em_milhares }}</span>
-          </li>
+    <!-- Cabeçalho -->
 
-          <!-- Subgrupos listados abaixo -->
-          {% for subgrupo, valor in subgrupos.items %}
-            {% if subgrupo != "SOMA" %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                {{ subgrupo }}
-                <span>{{ valor|em_milhares }}</span>
-              </li>
+    <div class="row mb-4">
+      <div class="col-md-9">
+        <div class="fw-bold" style="font-size: 1.05rem;">
+          {{ fundo.nome|upper }}
+        </div>
+        <div class="fw-bold">
+          CNPJ: {{ fundo.cnpj }}
+        </div>
+        <div class="mt-2">
+          {{ request.user.nome_empresa }}
+        </div>
+        <div>
+          CNPJ: {{ request.user.cnpj }}
+        </div>
+        <div class="fw-bold mt-3">
+          Demonstração do Resultado do Exercício
+        </div>
+        <div class="fw-bold">
+          Exercícios findos em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+        </div>
+        <div class="fst-italic" style="font-size: 0.85rem;">
+          (Valores expressos em milhares de reais)
+        </div>
+      </div>
+      <div class="col-md-3 text-end">
+        <a href="{% url 'exportar_dre_excel' fundo.id ano %}" class="btn btn-success">Baixar DRE em Excel <i class="bi bi-file-earmark-excel-fill ms-2"></i></a>
+      </div>
+    </div>
+
+    <!-- Tabela com os dados -->
+    <table class="table table-bordered table-sm">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 80%">Descrição</th>
+          <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
+          <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grupo, valores in dict_tabela.items %}
+          <tr class="table-secondary fw-bold">
+            <td colspan="1">{{ grupo }}</td>
+            <td class="text-end">{{ valores.SOMA|formata_milhar }}</td>
+            <td class="text-end">{{ valores.SOMA_ANTERIOR|formata_milhar }}</td>
+          </tr>
+          {% for subgrupo, val in valores.items %}
+            {% if subgrupo != 'SOMA' and subgrupo != 'SOMA_ANTERIOR' %}
+              <tr>
+                <td>{{ subgrupo }}</td>
+                <td class="text-end">{{ val.ATUAL|formata_milhar }}</td>
+                <td class="text-end">{{ val.ANTERIOR|formata_milhar }}</td>
+              </tr>
             {% endif %}
           {% endfor %}
-        </ul>
-      </div>
-    {% endfor %}
 
-    <div class="mt-4">
-      <ul class="list-group">
-        <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold">
-          Resultado do exercício
-          <span>{{ resultado_exercicio|em_milhares }}</span>
-        </li>
-      </ul>
-    </div>
+          <tr class="border-top">
+            <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+          </tr>
+
+        {% endfor %}
+
+        <!-- Resultado do exercício -->
+        <tr class="table-secondary fw-bold">
+          <td>Resultado do exercício</td>
+          <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
+          <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>
-
-{% endblock %}
-
-{% block scripts %}
-
 {% endblock %}

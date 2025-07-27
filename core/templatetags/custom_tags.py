@@ -7,7 +7,7 @@ def get_item(dictionary, key):
     return dictionary.get(key)
 
 @register.filter
-def em_milhares(valor):
+def formata_milhar(valor):
     try:
         valor = round(valor / 1000)
         if valor < 0:

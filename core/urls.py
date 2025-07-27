@@ -12,6 +12,9 @@ urlpatterns = [
     path('', demonstracao_financeira, name='demonstracao_financeira'),
     path('download-modelo-balancete/', download_modelo_balancete, name='download_modelo_balancete'),
     path('dre-resultado/<int:fundo_id>/<int:ano>/', dre_resultado, name='dre_resultado'),
+    path('dre-exportar-xlsx/<int:fundo_id>/<int:ano>/', exportar_dre_excel, name='exportar_dre_excel'),
+
+
 
     # Fundos
     path('fundos/', listar_fundos, name='listar_fundos'),
