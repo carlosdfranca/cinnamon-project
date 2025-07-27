@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+
+{% load static %}
+{% load custom_tags %}
+
+{% block title %}Demonstração Financeira{% endblock %}
+
+{% block conteudo %}
+
+<!-- Navbar -->
+{% include 'base/navbar.html' %}
+
+<div class="container mt-4">
+  <div class="card shadow rounded p-4">
+    <h3>Demonstração Financeira - {{ ano }}</h3>
+  
+    {% for grupo, subgrupos in dict_tabela.items %}
+      <div class="mt-4">
+        <ul class="list-group">
+
+          <!-- Cabeçalho com o nome do grupo + soma -->
+          <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold">
+            {{ grupo }}
+            <span>{{ subgrupos.SOMA|em_milhares }}</span>
+          </li>
+
+          <!-- Subgrupos listados abaixo -->
+          {% for subgrupo, valor in subgrupos.items %}
+            {% if subgrupo != "SOMA" %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ subgrupo }}
+                <span>{{ valor|em_milhares }}</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+
+    <div class="mt-4">
+      <ul class="list-group">
+        <li class="list-group-item d-flex justify-content-between align-items-center bg-light fw-bold">
+          Resultado do exercício
+          <span>{{ resultado_exercicio|em_milhares }}</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}
