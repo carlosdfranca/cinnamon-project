@@ -67,23 +67,25 @@
         if (anosPorFundo[fundoId] && anosPorFundo[fundoId].length > 0) {
           htmlAnos += `
             <div class="mb-3">
-              <h6 class="text-muted">Demonstrações Anteriores:</h6>
+              <h6 class="text-muted">DREs Cadastrados:</h6>
               <div class="d-flex flex-wrap gap-2">
           `;
           anosPorFundo[fundoId].forEach(ano => {
             htmlAnos += `
-              <a href="/dre-resultado/${fundoId}/${ano}/" class="btn btn-outline-primary btn-sm">
-                Ver DF ${ano}
+              <a href="/dre-resultado/${fundoId}/${ano}/" class="btn btn-outline-primary">
+                ${ano}
               </a>`;
           });
           htmlAnos += `</div></div>`;
         } else {
-          htmlAnos = `<div class="alert alert-info">Nenhuma Demonstração Financeira encontrada para este fundo.</div>`;
+          htmlAnos = `<div class="alert alert-info">Os dados para esse fundo ainda não foram enviados.</div>`;
         }
 
         // Renderizar o formulário com os botões acima
         container.innerHTML = `
           ${htmlAnos}
+          <hr>
+          <h4 class="mb-3">Enviar Balancete do Fundo Selecionado</h4>
           <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
 
@@ -91,7 +93,7 @@
 
             <div class="row">
               <div class="col-md-2 mb-3">
-                <label for="ano-df" class="form-label">Ano da Demonstração</label>
+                <label for="ano-df" class="form-label">Ano</label>
                 <input type="number" class="form-control" id="ano-df" name="ano" required>
               </div>
 

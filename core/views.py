@@ -12,9 +12,10 @@ from .forms import FundoForm
 from core.utils.utils import gerar_dados_dre
 
 import os
-import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.styles import Font, Alignment, Border, Side, NamedStyle, PatternFill
+from openpyxl.utils import get_column_letter
+import pandas as pd
 
 
 
@@ -130,50 +131,132 @@ def exportar_dre_excel(request, fundo_id, ano):
     ws = wb.active
     ws.title = "DRE"
 
-    bold_font = Font(bold=True)
+    ws.sheet_view.showGridLines = False
+
+    # Estilos
+    bold = Font(bold=True)
+    italic = Font(italic=True)
     center = Alignment(horizontal="center")
-    border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
-    )
+    right = Alignment(horizontal="right")
+    left = Alignment(horizontal="left")
+    indent = Alignment(horizontal="left", indent=1)
+    indent2 = Alignment(horizontal="left", indent=2)
 
-    ws.append(["Demonstração do Resultado do Exercício"])
-    ws.append([f"Exercícios findos em 31 de dezembro de {ano} e {ano - 1}"])
-    ws.append([])
-    ws.append(["", f"31/12/{ano}", f"31/12/{ano - 1}"])
+    bottom_border = Border(bottom=Side(style='thin'))
+    double_bottom_border = Border(bottom=Side(style="double"))
 
-    ws["A1"].font = bold_font
-    ws["A2"].font = bold_font
+    nome_fundo = str(fundo.nome).upper()
 
+    # Cabeçalhos principais
+    ws["A1"] = nome_fundo
+    ws["A1"].font = bold
+    ws["A1"].alignment = left
+
+    ws["A2"] = f"CNPJ: {fundo.cnpj}"
+    ws["A2"].font = bold
+    ws["A2"].alignment = left
+
+    ws["A3"] = request.user.nome_empresa
+    ws["A3"].alignment = left
+
+    ws["A4"] = f"CNPJ: {request.user.nome_empresa}"
+    ws["A4"].alignment = left
+
+    ws.append([])  # Linha em branco
+
+    ws["A6"] = "Demonstração do Resultado do Exercício"
+    ws["A6"].font = bold
+    ws["A6"].alignment = left
+
+    ws["A7"] = f"Exercícios findos em 31 de dezembro de {ano} e {ano - 1}"
+    ws["A7"].font = bold
+    ws["A7"].alignment = left
+
+    ws["A8"] = "(Valores expressos em milhares de reais)"
+    ws["A8"].font = italic
+    ws["A8"].alignment = left
+
+    ws.append([])  # Linha em branco
+
+    ws.insert_cols(3)
+
+    ws["A8"].border = bottom_border
+    ws["B8"].border = bottom_border
+    ws["C8"].border = bottom_border
+    ws["D8"].border = bottom_border
+
+    # Cabeçalho das datas
+    ws.append(["", f"31/12/{ano}", "", f"31/12/{ano - 1}"])
+
+    ws.append([])  # Linha em branco
+
+    row_header = ws.max_row
+    for col in (2, 4):
+        ws.cell(row=row_header, column=col).alignment = right
+        ws.cell(row=row_header, column=col).font = bold
+        ws.cell(row=row_header, column=col).border = bottom_border
+
+    # Dados da DRE
     for grupo, dados in dict_tabela.items():
-        ws.append([grupo])
-        ws.cell(row=ws.max_row, column=1).font = bold_font
+        # Adiciona o grupo + valores
+        ws.append([grupo, dados["SOMA"], "", dados["SOMA_ANTERIOR"]])
+        row = ws.max_row  
 
+        # Estilização do grupo
+        ws.cell(row=row, column=1).font = bold
+        ws.cell(row=row, column=1).alignment = left
+
+        for col in (2, 4):
+            cell = ws.cell(row=row, column=col)
+            cell.font = bold
+            cell.alignment = right
+            cell.number_format = '#,##0_);(#,##0)'
+            cell.border = bottom_border
+
+        # Subitens
         for item, valores in dados.items():
             if item in ["SOMA", "SOMA_ANTERIOR"]:
                 continue
-            ws.append([f"    {item}", valores["ATUAL"], valores["ANTERIOR"]])
 
-        ws.append([
-            f"  Total {grupo}",
-            dados.get("SOMA", 0),
-            dados.get("SOMA_ANTERIOR", 0)
-        ])
-        ws.cell(row=ws.max_row, column=1).font = bold_font
+            ws.append([item, valores["ATUAL"], "", valores["ANTERIOR"]])
+            row = ws.max_row
 
-    ws.append([])
+            ws.cell(row=row, column=1).alignment = indent2
+
+            for col in (2, 4):
+                cell = ws.cell(row=row, column=col)
+                cell.alignment = right
+                cell.number_format = '#,##0_);(#,##0)'
+
+        ws.append([])  # Linha em branco entre grupos
+
+
+    # Resultado do exercício
+    row = ws.max_row
     ws.append([
         "Resultado do exercício",
         resultado_exercicio,
+        "",
         resultado_exercicio_anterior
     ])
-    ws.cell(row=ws.max_row, column=1).font = bold_font
+    row = ws.max_row
+    ws.cell(row=row, column=1).font = bold
+    ws.cell(row=row, column=1).alignment = left
+    for col in (2, 4):
+        cell = ws.cell(row=row, column=col)
+        cell.number_format = '#,##0_);(#,##0)'
+        cell.font = bold
+        cell.alignment = right
+        cell.border = double_bottom_border
 
-    # Ajustes de layout
-    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, max_col=3):
-        for cell in row:
-            cell.alignment = center
-            cell.border = border
+    ws.insert_cols(1)
+
+    # Ajuste de largura de colunas
+    col_widths = {1:3, 2: 65, 3: 12, 4: 5, 5: 12, 6:3}
+    for col_num, width in col_widths.items():
+        ws.column_dimensions[get_column_letter(col_num)].width = width
+
+
 
     # Resposta HTTP com conteúdo do Excel
     response = HttpResponse(
@@ -181,7 +264,7 @@ def exportar_dre_excel(request, fundo_id, ano):
     )
     nome_fundo = fundo.nome.replace("-", "")
     nome_curto = "_".join(nome_fundo.split())
-    response["Content-Disposition"] = f'attachment; filename=DRE_{ano}_{nome_curto}.xlsx' 
+    response["Content-Disposition"] = f'attachment; filename=DRE_{ano}_{nome_curto}.xlsx'
     wb.save(response)
     return response
 

@@ -48,14 +48,14 @@ def gerar_dados_dre(fundo_id, ano):
         soma_anterior = 0
 
         for subgrupo in subgrupos:
-            valor_atual = sum(
+            valor_atual = int(round(sum(
                 item.saldo_final for item in itens_ano
                 if item.conta_corrente.grupo_df.strip().lower() == subgrupo.strip().lower() # type: ignore
-            ) # type: ignore
-            valor_anterior = sum(
+            ) / 1000, 0)) # type: ignore
+            valor_anterior = int(round(sum(
                 item.saldo_final for item in itens_ano_anterior
                 if item.conta_corrente.grupo_df.strip().lower() == subgrupo.strip().lower() # type: ignore
-            ) # type: ignore
+            ) / 1000, 0)) # type: ignore
             grupo_data[subgrupo] = {
                 "ATUAL": valor_atual,
                 "ANTERIOR": valor_anterior
