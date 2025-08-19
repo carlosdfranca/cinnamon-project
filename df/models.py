@@ -1,26 +1,59 @@
+# df/models.py
 from django.db import models
-from usuarios.models import Usuario
+from usuarios.models import Empresa  # <<< agora o escopo é a empresa
 
+# =========================
+# FUNDOS (escopo por empresa)
+# =========================
 class Fundo(models.Model):
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="fundos",
+        db_index=True,
+        help_text="Empresa (tenant) proprietária deste fundo."
+    )
     nome = models.CharField(max_length=255)
     cnpj = models.CharField(max_length=20)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Fundo"
         verbose_name_plural = "Fundos"
-        ordering = ["usuario", "nome"]
+        # Ordena por empresa e nome para visualização consistente no admin/listas
+        ordering = ["empresa", "nome"]
+        # Regras de unicidade por tenant:
+        # - mesmo CNPJ não pode existir duas vezes dentro da mesma empresa
+        # - opcionalmente, mesmo nome não deve repetir dentro da mesma empresa
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa", "cnpj"], name="uq_fundo_empresa_cnpj"
+            ),
+            models.UniqueConstraint(
+                fields=["empresa", "nome"], name="uq_fundo_empresa_nome"
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["empresa", "nome"], name="idx_fundo_emp_nome"),
+            models.Index(fields=["empresa", "cnpj"], name="idx_fundo_emp_cnpj"),
+        ]
 
     def __str__(self):
-        return f"{self.nome[:25]} ({self.usuario.first_name} {self.usuario.last_name})"
-    
+        return f"{self.nome} [{self.cnpj}] - {self.empresa.nome}"
 
+
+# ==========================================
+# MAPA DE CONTAS CONTÁBEIS -> GRUPOS DO DF
+# ==========================================
 class MapeamentoContas(models.Model):
+    """
+    Mapa global (padrão) de contas para seus grupos/DFs.
+    Se cada empresa tiver um plano próprio, veja nota abaixo para torná-lo por-empresa.
+    """
     TIPO_CHOICES = [
-        (1, 'Ativo'),
-        (2, 'Passivo'),
-        (3, 'Patrimônio Líquido'),
-        (4, 'Resultado'),
+        (1, "Ativo"),
+        (2, "Passivo"),
+        (3, "Patrimônio Líquido"),
+        (4, "Resultado"),
     ]
 
     conta = models.CharField(max_length=30, unique=True)
@@ -32,23 +65,53 @@ class MapeamentoContas(models.Model):
         verbose_name = "Mapeamento de CC"
         verbose_name_plural = "Mapeamentos de CC"
         ordering = ["tipo", "grupo_df", "conta"]
+        indexes = [
+            models.Index(fields=["tipo", "grupo_df"], name="idx_map_tipo_grupo"),
+        ]
 
     def __str__(self):
         return f"{self.conta} - {self.grupo_df}"
-    
 
+
+# =================================================
+# BALANCETE (por fundo, ano e conta mapeada)
+# =================================================
 class BalanceteItem(models.Model):
-    fundo = models.ForeignKey(Fundo, on_delete=models.SET_NULL, null=True, blank=True)
+    fundo = models.ForeignKey(
+        Fundo,
+        on_delete=models.CASCADE,  # se deletar o Fundo, some o balancete dele
+        related_name="balancete",
+        db_index=True,
+    )
     ano = models.IntegerField()
-    conta_corrente = models.ForeignKey('MapeamentoContas', on_delete=models.SET_NULL, null=True, blank=True)
+    conta_corrente = models.ForeignKey(
+        MapeamentoContas,
+        on_delete=models.PROTECT,  # evita quebrar histórico se alguém mexer no mapa
+        null=True, blank=True,
+        related_name="itens",
+    )
     saldo_final = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
 
     data_importacao = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Item do Balancete'
-        verbose_name_plural = 'Itens do Balancete'
-        ordering = ['conta_corrente']
+        verbose_name = "Item do Balancete"
+        verbose_name_plural = "Itens do Balancete"
+        ordering = ["fundo", "conta_corrente"]
+        # Se cada (fundo, ano, conta) deve ser único, este constraint evita duplicatas:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["fundo", "ano", "conta_corrente"],
+                name="uq_balancete_fundo_ano_conta"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["ano"], name="idx_bal_ano"),
+            models.Index(fields=["fundo", "ano"], name="idx_bal_fundo_ano"),
+        ]
 
     def __str__(self):
-        return f"[{self.ano}] {self.conta_corrente} | Saldo: R$ {self.saldo_final:,.2f}"
+        # cuidado com None no saldo_final/conta
+        conta = self.conta_corrente.conta if self.conta_corrente else "—"
+        saldo = f"{self.saldo_final:.2f}" if self.saldo_final is not None else "—"
+        return f"[{self.ano}] {self.fundo.nome} | {conta} | Saldo: R$ {saldo}"
