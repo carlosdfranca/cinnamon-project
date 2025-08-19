@@ -1,12 +1,13 @@
 {% load static %}
 
 <nav class="navbar navbar-expand-lg border-bottom px-4 py-2 mb-3">
-  <div class="navbar-brand fw-bold text-dark">
+  <!-- Branding -->
+  <div class="navbar-brand fw-bold text-dark d-flex align-items-center">
     <img src="{% static 'img/logo_empresa.png' %}" alt="Logo" class="me-2" style="height: 32px;">
   </div>
 
-  <!-- Links da navbar -->
-   <div class="ms-1">
+  <!-- Links principais -->
+  <div class="ms-2">
     <a href="{% url 'demonstracao_financeira' %}" class="nav-link px-3 text-dark">
       Demonstração Financeira
     </a>
@@ -17,9 +18,28 @@
     </a>
   </div>
 
+  <!-- Seletor de Empresa: SOMENTE para usuários globais -->
+  <div class="ms-3 d-flex align-items-center">
+    {% if user_is_global and empresas_disponiveis %}
+      <form method="POST" action="{% url 'trocar_empresa_ativa' %}" class="d-flex align-items-center">
+        {% csrf_token %}
+        <label for="empresa_id" class="me-2 mb-0">Empresa:</label>
+        <select name="empresa_id" id="empresa_id" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Selecionar empresa ativa">
+          <option value="">-- selecione --</option>
+          {% for emp in empresas_disponiveis %}
+            <option value="{{ emp.id }}" {% if empresa_ativa and empresa_ativa.id == emp.id %}selected{% endif %}>
+              {{ emp.nome }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+  </div>
+
+  <!-- Menu usuário -->
   <div class="ms-auto dropdown">
-    <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="perfilDropdown"
-      data-bs-toggle="dropdown" aria-expanded="false">
+    <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+       id="perfilDropdown" data-bs-toggle="dropdown" aria-expanded="false">
       <i class="bi bi-person-circle me-2"></i> {{ request.user.first_name|default:request.user.username }}
     </a>
     <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="perfilDropdown">

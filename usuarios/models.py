@@ -58,7 +58,7 @@ class Empresa(models.Model):
     # Um (e apenas um) Master por empresa.
     # Usamos PROTECT para impedir deletar o Master sem antes trocar o master da empresa.
     master = models.ForeignKey(
-        Usuario,
+        "Usuario",
         null=True, blank=True,
         on_delete=models.PROTECT,
         related_name="empresas_como_master",
@@ -109,17 +109,16 @@ class Empresa(models.Model):
 
     # Azulejos de conveniência
     def is_master(self, usuario):
-        # type: ignore[attr-defined]
         return self.master_id == getattr(usuario, "id", None)
 
     def usuarios(self):
         """
-        Depois que criarmos Membership, isso pode delegar para um related_name:
-        return Usuario.objects.filter(memberships__empresa=self)
-        Por hora, deixamos como futuro.
+        Retorna todos os usuários vinculados à empresa via Membership.
         """
-        from django.contrib.auth import get_user_model
-        return get_user_model().objects.none()
+        return Usuario.objects.filter(
+            memberships__empresa=self,
+            memberships__is_active=True
+        )
 
 
 class Membership(models.Model):
@@ -155,19 +154,15 @@ class Membership(models.Model):
         - Se este vínculo é MASTER e a empresa já tem outro master, erro.
         - Se a empresa.master está definido e for diferente do usuário, este vínculo não pode ser MASTER.
         """
-        # Evita acessar self.empresa.master antes de ter empresa carregada
         if not self.empresa_id or not self.usuario_id:
             return
 
-        empresa = self.empresa  # já carregado pelo ORM
+        empresa = self.empresa
 
         if self.role == self.Role.MASTER:
-            # Se já existe master e é diferente deste usuário, não pode
             if empresa.master_id and empresa.master_id != self.usuario_id:
                 raise ValidationError(_("Esta empresa já possui um Master diferente."))
         else:
-            # Se papel não é MASTER, mas a empresa.master é este usuário, tudo bem
-            # (o ponteiro master em Empresa é a autoridade final).
             pass
 
     @transaction.atomic
@@ -175,30 +170,24 @@ class Membership(models.Model):
         creating = self._state.adding
         old_role = None
         if not creating:
-            # Captura papel anterior para detectar promoções/degradações
             old = type(self).objects.filter(pk=self.pk).only("role").first()
             old_role = old.role if old else None
 
         super().save(*args, **kwargs)
 
-        # Sincronização com Empresa.master:
-        # - Se virou MASTER (ou foi criado já como MASTER), atualiza empresa.master.
-        # - Se deixou de ser MASTER e era o master atual, remove ponteiro (ou troque antes).
+        # Sincronização com Empresa.master
         empresa = self.empresa
         if self.role == self.Role.MASTER:
             if empresa.master_id != self.usuario_id:
-                # Define/atualiza master na empresa
                 empresa.master = self.usuario
-                # Valida empresa (caso tenha regras adicionais) e salva
                 empresa.full_clean(exclude=None)
                 empresa.save(update_fields=["master"])
         else:
-            # Se degradou e era o master atual, zera ponteiro para não quebrar integridade
             if empresa.master_id == self.usuario_id:
                 empresa.master = None
                 empresa.save(update_fields=["master"])
 
-    # --- Helpers de permissão (ajuste conforme sua regra) ---
+    # --- Helpers de permissão ---
     def can_manage_company_users(self) -> bool:
         return self.role in {self.Role.MASTER, self.Role.ADMIN} and self.is_active
 

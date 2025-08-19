@@ -1,33 +1,27 @@
+# views.py
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils.timezone import now
 
-from django.db import transaction
-
-from df.models import Fundo, BalanceteItem, MapeamentoContas
+from df.models import Fundo, BalanceteItem
 from usuarios.models import Empresa, Membership
-from usuarios.utils.query import restrict_by_empresa  # << escopo por empresa
+from usuarios.utils.company_scope import query_por_empresa_ativa  # << NOVO
 
 from .forms import FundoForm
-from core.utils.utils import gerar_dados_dre
+
+# Camadas novas
+from core.upload.balancete_parser import parse_excel, BalanceteSchemaError
+from core.processing.import_service import import_balancete
+from core.processing.dre_service import gerar_dados_dre
 
 import os
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-import pandas as pd
 
 
-# --------- helpers de escopo ---------
 def _empresas_do_usuario(user):
-    """
-    Retorna QS de empresas visíveis:
-    - Papel global (viewer/admin/superuser): todas
-    - Senão: empresas com Membership ativo
-    """
     has_global = getattr(user, "has_global_scope", None)
     if has_global and user.has_global_scope():
         return Empresa.objects.all()
@@ -40,9 +34,9 @@ def _empresas_do_usuario(user):
 # ===============================
 @login_required
 def demonstracao_financeira(request):
-    fundos_qs = restrict_by_empresa(
+    fundos_qs = query_por_empresa_ativa(
         Fundo.objects.select_related("empresa"),
-        request.user,
+        request,
         "empresa",
     ).order_by("nome")
     fundos = list(fundos_qs)
@@ -66,58 +60,35 @@ def demonstracao_financeira(request):
             messages.error(request, "Ano inválido.")
             return render(request, "demonstracao_financeira.html", {"fundos": fundos, "fundos_anos": fundos_anos})
 
-        fundo_qs = restrict_by_empresa(Fundo.objects.all(), request.user, "empresa")
+        fundo_qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
         fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
+        if not arquivo:
+            messages.error(request, "Selecione um arquivo XLSX ou CSV.")
+            return redirect("demonstracao_financeira")
+
         try:
-            df = pd.read_excel(arquivo)
+            rows = parse_excel(arquivo)
+        except BalanceteSchemaError as e:
+            messages.error(request, f"Planilha inválida. Faltam colunas: {', '.join(e.missing_columns)}")
+            return redirect("demonstracao_financeira")
         except Exception as e:
             messages.error(request, f"Erro ao ler o arquivo: {e}")
             return redirect("demonstracao_financeira")
 
-        importados = 0
-        ignorados = 0
+        report = import_balancete(fundo_id=fundo.id, ano=ano, rows=rows)
 
-        with transaction.atomic():
-            for _, row in df.iterrows():
-                conta_codigo = str(row.get("CONTA", "")).strip()
-                if not conta_codigo:
-                    ignorados += 1
-                    continue
-
-                saldo_atual = row.get("SALDO ATUAL")
-                saldo_anterior = row.get("SALDO ANTERIOR")
-
-                try:
-                    conta_mapeada = MapeamentoContas.objects.get(conta=conta_codigo)
-                except MapeamentoContas.DoesNotExist:
-                    ignorados += 1
-                    continue
-
-                # Saldo do ano atual
-                if not pd.isna(saldo_atual):
-                    _, created = BalanceteItem.objects.update_or_create(
-                        fundo=fundo,
-                        ano=ano,
-                        conta_corrente=conta_mapeada,
-                        defaults={"saldo_final": saldo_atual},
-                    )
-                    importados += 1 if created else 1  # conta como operação bem-sucedida
-
-                # Saldo do ano anterior
-                if not pd.isna(saldo_anterior):
-                    _, created = BalanceteItem.objects.update_or_create(
-                        fundo=fundo,
-                        ano=ano - 1,
-                        conta_corrente=conta_mapeada,
-                        defaults={"saldo_final": saldo_anterior},
-                    )
-                    importados += 1 if created else 1
-
-        messages.success(
-            request,
-            f"Importação concluída: {importados} itens salvos/atualizados (anos {ano} e {ano-1}), {ignorados} ignorados."
-        )
+        if report.errors:
+            messages.warning(
+                request,
+                f"Importação concluída: {report.imported} inseridos, {report.updated} atualizados, "
+                f"{report.ignored} ignorados. Erros: {len(report.errors)} (ex.: contas sem mapeamento)."
+            )
+        else:
+            messages.success(
+                request,
+                f"Importação concluída: {report.imported} inseridos, {report.updated} atualizados, {report.ignored} ignorados."
+            )
         return redirect("demonstracao_financeira")
 
     return render(request, "demonstracao_financeira.html", {
@@ -139,13 +110,13 @@ def download_modelo_balancete(request):
 # ===============================
 @login_required
 def dre_resultado(request, fundo_id, ano):
-    fundo_qs = restrict_by_empresa(Fundo.objects.select_related("empresa"), request.user, "empresa")
+    fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
-    dict_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, ano)
+    dict_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, int(ano))
     return render(request, "dre_resultado.html", {
         "dict_tabela": dict_tabela,
-        "ano": ano,
+        "ano": int(ano),
         "fundo": fundo,
         "resultado_exercicio": resultado_exercicio,
         "resultado_exercicio_anterior": resultado_exercicio_anterior
@@ -154,10 +125,10 @@ def dre_resultado(request, fundo_id, ano):
 
 @login_required
 def exportar_dre_excel(request, fundo_id, ano):
-    fundo_qs = restrict_by_empresa(Fundo.objects.select_related("empresa"), request.user, "empresa")
+    fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
-    dict_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, ano)
+    dict_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, int(ano))
 
     wb = Workbook()
     ws = wb.active
@@ -167,10 +138,8 @@ def exportar_dre_excel(request, fundo_id, ano):
     # Estilos
     bold = Font(bold=True)
     italic = Font(italic=True)
-    center = Alignment(horizontal="center")
     right = Alignment(horizontal="right")
     left = Alignment(horizontal="left")
-    indent = Alignment(horizontal="left", indent=1)
     indent2 = Alignment(horizontal="left", indent=2)
     bottom_border = Border(bottom=Side(style="thin"))
     double_bottom_border = Border(bottom=Side(style="double"))
@@ -229,11 +198,11 @@ def exportar_dre_excel(request, fundo_id, ano):
     for grupo, dados in dict_tabela.items():
         ws.append([grupo, dados["SOMA"], "", dados["SOMA_ANTERIOR"]])
         row = ws.max_row
-        ws.cell(row=row, column=1).font = bold
+        ws.cell(row=row, column=1).font = Font(bold=True)
         ws.cell(row=row, column=1).alignment = left
         for col in (2, 4):
             cell = ws.cell(row=row, column=col)
-            cell.font = bold
+            cell.font = Font(bold=True)
             cell.alignment = right
             cell.number_format = "#,##0_);(#,##0)"
             cell.border = bottom_border
@@ -251,7 +220,6 @@ def exportar_dre_excel(request, fundo_id, ano):
 
         ws.append([])  # Linha em branco entre grupos
 
-
     # Resultado do exercício
     row = ws.max_row
     ws.append([
@@ -261,18 +229,19 @@ def exportar_dre_excel(request, fundo_id, ano):
         resultado_exercicio_anterior
     ])
     row = ws.max_row
-    ws.cell(row=row, column=1).font = bold
+    ws.cell(row=row, column=1).font = Font(bold=True)
     ws.cell(row=row, column=1).alignment = left
     for col in (2, 4):
         cell = ws.cell(row=row, column=col)
         cell.number_format = "#,##0_);(#,##0)"
-        cell.font = bold
+        cell.font = Font(bold=True)
         cell.alignment = right
         cell.border = double_bottom_border
 
     ws.insert_cols(1)
 
     # Larguras
+    from openpyxl.utils import get_column_letter
     col_widths = {1: 3, 2: 65, 3: 12, 4: 5, 5: 12, 6: 3}
     for col_num, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
@@ -292,9 +261,9 @@ def exportar_dre_excel(request, fundo_id, ano):
 # ===========================
 @login_required
 def listar_fundos(request):
-    fundos = restrict_by_empresa(
+    fundos = query_por_empresa_ativa(
         Fundo.objects.select_related("empresa"),
-        request.user,
+        request,
         "empresa",
     ).order_by("nome")
     form = FundoForm()
@@ -308,20 +277,25 @@ def adicionar_fundo(request):
         if form.is_valid():
             fundo = form.save(commit=False)
 
-            # Resolver a empresa do fundo
+            # 1) Coletar possíveis fontes de empresa:
             empresas_user = list(_empresas_do_usuario(request.user))
-            empresa_id_post = request.POST.get("empresa") or request.POST.get("empresa_id")
+            empresa_ativa = getattr(request, "empresa_ativa", None)
+            empresa_id_post = (
+                request.POST.get("empresa")
+                or request.POST.get("empresa_id")
+                or (empresa_ativa.id if empresa_ativa else None)  # Fallback para empresa ativa da navbar
+                or request.session.get("empresa_ativa_id")
+            )
 
+            # 2) Resolver empresa conforme escopo do usuário:
             if getattr(request.user, "has_global_scope", None) and request.user.has_global_scope():
-                # Global pode escolher qualquer empresa (se o form não tiver, tenta pelo POST)
                 if not getattr(fundo, "empresa_id", None):
                     if empresa_id_post:
                         fundo.empresa_id = empresa_id_post
                     else:
-                        messages.error(request, "Selecione a empresa do Fundo.")
+                        messages.error(request, "Selecione a empresa do Fundo (ou escolha uma empresa ativa na navbar).")
                         return redirect("listar_fundos")
             else:
-                # Sem escopo global: se ele só tem 1 empresa, usa ela; se tiver várias, exige seleção
                 if len(empresas_user) == 1:
                     fundo.empresa = empresas_user[0]
                 else:
@@ -342,17 +316,15 @@ def adicionar_fundo(request):
 
 @login_required
 def editar_fundo(request, fundo_id):
-    qs = restrict_by_empresa(Fundo.objects.all(), request.user, "empresa")
+    qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
     fundo = get_object_or_404(qs, id=fundo_id)
 
     if request.method == "POST":
         form = FundoForm(request.POST, instance=fundo)
         if form.is_valid():
             obj = form.save(commit=False)
-            # Não permitir trocar empresa para uma que o usuário não tenha acesso
             nova_empresa_id = getattr(obj, "empresa_id", fundo.empresa_id)
             if nova_empresa_id != fundo.empresa_id:
-                # valida se pode
                 empresas_user_ids = set(_empresas_do_usuario(request.user).values_list("id", flat=True))
                 if (getattr(request.user, "has_global_scope", None) and request.user.has_global_scope()) or (
                     nova_empresa_id in empresas_user_ids
@@ -371,7 +343,7 @@ def editar_fundo(request, fundo_id):
 
 @login_required
 def excluir_fundo(request, fundo_id):
-    qs = restrict_by_empresa(Fundo.objects.all(), request.user, "empresa")
+    qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
     fundo = get_object_or_404(qs, id=fundo_id)
 
     if request.method == "POST":
