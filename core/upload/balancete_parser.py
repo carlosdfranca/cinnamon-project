@@ -7,7 +7,7 @@ import pandas as pd
 import io
 import unicodedata
 
-REQUIRED_CANONICAL_COLS = ("CONTA", "SALDO ATUAL", "SALDO ANTERIOR")
+REQUIRED_CANONICAL_COLS = ("CONTA", "SALDOATUAL", "SALDOANTERIOR")
 
 
 @dataclass(frozen=True)
@@ -18,12 +18,44 @@ class BalanceteRowDTO:
     raw: Dict  # linha original (debug/erros)
 
 
+# =========================
+# Erros de esquema
+# =========================
 class BalanceteSchemaError(Exception):
-    def __init__(self, missing_columns: List[str]):
+    def __init__(self, missing_columns: List[str], *, debug_info: Optional[str] = None):
         self.missing_columns = missing_columns
-        super().__init__(f"Colunas ausentes: {', '.join(missing_columns)}")
+        self.debug_info = debug_info
+        msg = f"Colunas ausentes: {', '.join(missing_columns)}"
+        if debug_info:
+            msg += f" | Debug: {debug_info}"
+        super().__init__(msg)
 
 
+# =========================
+# DTO de saída do parser
+# =========================
+@dataclass
+class BalanceteRowDTO:
+    conta: str
+    saldo_atual: Optional[float]
+    saldo_anterior: Optional[float]
+    raw: Dict
+
+
+# =========================
+# Colunas canônicas exigidas
+# =========================
+# Mantemos as labels canônicas ESTÁVEIS e sem acento/espacos extra.
+CONTA = "CONTA"
+SALDO_ATUAL = "SALDOATUAL"
+SALDO_ANTERIOR = "SALDOANTERIOR"
+
+REQUIRED_CANONICAL_COLS = (CONTA, SALDO_ATUAL, SALDO_ANTERIOR)
+
+
+# =========================
+# Normalização
+# =========================
 def _normalize(s: str) -> str:
     """
     Normaliza para comparação de nomes de coluna:
@@ -39,34 +71,55 @@ def _normalize(s: str) -> str:
     return s
 
 
+# =========================
+# Aliases/renomeações
+# =========================
 def _build_renames(columns: List[str]) -> Dict[str, str]:
     """
-    Mapeia colunas da planilha para os canônicos:
-    - CONTA ↔ {CONTA, COD CONTA, CODIGO, C CONTA}
-    - SALDO ATUAL ↔ {SALDO, SALDO ATUAL, ATUAL}
-    - SALDO ANTERIOR ↔ {SALDO ANTERIOR, ANTERIOR, SALDO PREVIO}
+    Constrói um mapeamento de colunas encontradas -> nomes canônicos.
+    Opera sempre em cima de versões normalizadas para robustez.
     """
-    aliases = {
-        "CONTA": {"CONTA", "COD CONTA", "CODIGO", "COD", "CODIGO CONTA", "C CONTA", "ID CONTA"},
-        "SALDO ATUAL": {"SALDO", "SALDO ATUAL", "ATUAL", "VALOR ATUAL"},
-        "SALDO ANTERIOR": {"SALDO ANTERIOR", "ANTERIOR", "VALOR ANTERIOR", "SALDO PREVIO"},
+    # Dicionário de opções por canônico:
+    aliases: Dict[str, List[str]] = {
+        CONTA: [
+            "CONTA", "COD CONTA", "CODIGO", "COD", "CODIGO CONTA", "C CONTA", "ID CONTA", "CODIGO DA CONTA",
+        ],
+        SALDO_ATUAL: [
+            "SALDOATUAL", "SALDO ATUAL", "ATUAL", "VALOR ATUAL", "SALDO", "SALDO FINAL", "SALDO DEBITO CREDITO",
+        ],
+        SALDO_ANTERIOR: [
+            # certo
+            "SALDOANTERIOR", "SALDO ANTERIOR", "VALOR ANTERIOR",
+            # variações comuns
+            "ANTERIOR", "SALDO PREVIO", "SALDO PREV",
+            # ERRO DE DIGITAÇÃO COMUM (sem R)
+            "SALDOANTEIOR",
+        ],
     }
-    norm_to_original = {_normalize(c): c for c in columns}
+
+    # Índice: normalizado da coluna original -> nome original
+    norm_to_original: Dict[str, str] = {_normalize(c): c for c in columns}
+
     renames: Dict[str, str] = {}
 
+    # Para cada canônico, tente encontrar alguma das variantes nas colunas originais
     for canonical, options in aliases.items():
-        found = None
-        for opt in options:
-            key = _normalize(opt)
-            # tenta normalizado exato
-            if key in norm_to_original:
-                found = norm_to_original[key]
-                break
-        # fallback: se já existir a coluna canônica literal
-        if not found and canonical in columns:
-            found = canonical
-        if found:
-            renames[found] = canonical
+        found_original = None
+
+        # 1) se a canônica literal (normalizada) já existir como coluna
+        if _normalize(canonical) in norm_to_original:
+            found_original = norm_to_original[_normalize(canonical)]
+        else:
+            # 2) procurar por qualquer alias
+            for opt in options:
+                key = _normalize(opt)
+                if key in norm_to_original:
+                    found_original = norm_to_original[key]
+                    break
+
+        if found_original:
+            renames[found_original] = canonical
+
     return renames
 
 
@@ -74,50 +127,64 @@ def _to_float(val) -> Optional[float]:
     try:
         if pd.isna(val):
             return None
-        # strings com milhar/ponto e vírgula
         if isinstance(val, str):
-            v = val.strip().replace(".", "").replace(",", ".")
+            v = val.strip()
+            if v == "":
+                return None
+            # normaliza string PT-BR: milhar . e decimal ,
+            v = v.replace(".", "").replace(",", ".")
             return float(v)
         return float(val)
     except Exception:
         return None
 
 
+# =========================
+# Parser principal
+# =========================
 def parse_excel(file_obj) -> List[BalanceteRowDTO]:
     """
     Lê XLSX ou CSV e retorna linhas canônicas (sem tocar no banco).
     Valida a presença das colunas obrigatórias.
     """
-    # buffer pra permitir repetidas leituras seguras
+    # Carrega conteúdo para buffer seguro
     name = getattr(file_obj, "name", "") or ""
     content = file_obj.read()
     file_obj.seek(0)
 
-    df: pd.DataFrame
+    # Carrega DataFrame
     if name.lower().endswith(".csv"):
+        # sep=None -> sniff automático; engine='python' lida com separadores variados
         df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="utf-8", sep=None, engine="python")
     else:
-        # padrão: Excel
         df = pd.read_excel(io.BytesIO(content), dtype=object)
 
     if df.empty:
-        raise BalanceteSchemaError(list(REQUIRED_CANONICAL_COLS))
+        raise BalanceteSchemaError(list(REQUIRED_CANONICAL_COLS), debug_info="DataFrame vazio")
 
-    renames = _build_renames(list(df.columns))
+    # Renomeia colunas conforme aliases/normalização
+    original_cols = list(df.columns)
+    renames = _build_renames(original_cols)
     df = df.rename(columns=renames)
 
+    # Diagnóstico: quais canônicas faltaram?
     missing = [c for c in REQUIRED_CANONICAL_COLS if c not in df.columns]
     if missing:
-        raise BalanceteSchemaError(missing)
+        debug = (
+            f"originais={original_cols} | renames={renames} | "
+            f"presentes={list(df.columns)} | required={list(REQUIRED_CANONICAL_COLS)}"
+        )
+        raise BalanceteSchemaError(missing, debug_info=debug)
 
+    # Monta DTOs
     rows: List[BalanceteRowDTO] = []
     for _, row in df.iterrows():
-        conta = str(row.get("CONTA") or "").strip()
+        conta = str(row.get(CONTA) or "").strip()
         if not conta:
             # ignora linhas sem conta
             continue
-        saldo_atual = _to_float(row.get("SALDO ATUAL"))
-        saldo_anterior = _to_float(row.get("SALDO ANTERIOR"))
+        saldo_atual = _to_float(row.get(SALDO_ATUAL))
+        saldo_anterior = _to_float(row.get(SALDO_ANTERIOR))
         rows.append(
             BalanceteRowDTO(
                 conta=conta,

@@ -85,7 +85,7 @@
             <h4 class="mb-3">Enviar Balancete do Fundo Selecionado</h4>
             <form method="POST" enctype="multipart/form-data" aria-label="Formulário para enviar balancete">
               {% csrf_token %}
-              <input type="hidden" name="fundo_id" value="\${fundoId}">
+              <input type="hidden" name="fundo_id" value="${fundoId}">
               <div class="row">
                 <div class="col-md-2 mb-3">
                   <label for="ano-df" class="form-label">Ano</label>
@@ -97,10 +97,7 @@
                   <div class="form-text">Formatos aceitos: .xlsx ou .xls</div>
                 </div>
               </div>
-              <div class="d-flex justify-content-center gap-3 mt-3">
-                <a href="{% url 'download_modelo_balancete' %}" class="btn btn-success">
-                  Baixar Modelo de Balancete <i class="bi bi-file-earmark-excel-fill ms-2" aria-hidden="true"></i>
-                </a>
+              <div class="d-flex justify-content-center mt-3">
                 <button type="submit" class="btn btn-primary">
                   Enviar Balancete <i class="bi bi-upload ms-2" aria-hidden="true"></i>
                 </button>
@@ -111,9 +108,6 @@
               <i class="bi bi-eye me-2" aria-hidden="true"></i>
               Você não tem permissão para enviar balancete neste contexto. (Visualização apenas)
             </div>
-            <a href="{% url 'download_modelo_balancete' %}" class="btn btn-success">
-              Baixar Modelo de Balancete <i class="bi bi-file-earmark-excel-fill ms-2" aria-hidden="true"></i>
-            </a>
           {% endif %}
         `;
       });

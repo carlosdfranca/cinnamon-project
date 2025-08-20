@@ -133,16 +133,6 @@ def demonstracao_financeira(request):
     })
 
 
-
-@login_required
-@company_can_view_data
-def download_modelo_balancete(request):
-    caminho_arquivo = os.path.join(settings.STATIC_ROOT, "modelos", "modelo_balancete.xlsx")
-    if settings.DEBUG:
-        caminho_arquivo = os.path.join(settings.BASE_DIR, "static", "modelos", "modelo_balancete.xlsx")
-    return FileResponse(open(canho_arquivo := caminho_arquivo, "rb"), as_attachment=True, filename="Modelo Balancete.xlsx")
-
-
 # ===============================
 # DRE (visualização/exportação) — view-only
 # ===============================
