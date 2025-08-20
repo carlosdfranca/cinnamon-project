@@ -63,7 +63,6 @@ def import_balancete(*, fundo_id: int, ano: int, rows: List) -> ImportReport:
         conta_map = mapa_by_conta.get(conta)
         if conta_map is None:
             ignored += 1
-            errors.append(ImportErrorItem(row_index=idx, reason=f"Conta '{conta}' sem mapeamento.", raw=r.raw))
             continue
 
         has_any = (r.saldo_atual is not None) or (r.saldo_anterior is not None)
