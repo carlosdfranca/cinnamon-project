@@ -1,31 +1,28 @@
 {% extends 'base/base.html' %}
-
 {% load static %}
 
 {% block title %}Demonstração Financeira{% endblock %}
 
 {% block conteudo %}
-
 <!-- Navbar -->
 {% include 'base/navbar.html' %}
-
 
 <div class="container mt-5">
   {% if messages %}
     <div class="mt-3">
       {% for message in messages %}
-        <div class="alert alert-{{ message.tags  }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
           {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+          <button type="button" class="btn btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
         </div>
       {% endfor %}
     </div>
   {% endif %}
+
   {% if fundos %}
-  
     <div class="card shadow rounded p-4">
       <h4 class="mb-3">Selecionar Fundo</h4>
-      <select class="form-select" id="select-fundo">
+      <select class="form-select" id="select-fundo" aria-label="Escolha um fundo para visualizar ou enviar DRE">
         <option selected disabled>Escolha um fundo</option>
         {% for fundo in fundos %}
           <option value="{{ fundo.id }}">{{ fundo.nome }} ({{ fundo.cnpj }})</option>
@@ -39,13 +36,12 @@
   {% else %}
     <div class="alert alert-warning text-center mt-5">
       Você ainda não adicionou nenhum fundo.
-      <a href="{% url 'listar_fundos' %}" class="alert-link">Clique aqui para cadastrar seu primeiro fundo.</a>
+      {% if can_enviar_balancete %}
+        <a href="{% url 'listar_fundos' %}" class="alert-link">Clique aqui para cadastrar seu primeiro fundo.</a>
+      {% endif %}
     </div>
   {% endif %}
 </div>
-
-
-
 {% endblock %}
 
 {% block scripts %}
@@ -81,52 +77,46 @@
           htmlAnos = `<div class="alert alert-info">Os dados para esse fundo ainda não foram enviados.</div>`;
         }
 
-        // Renderizar o formulário com os botões acima
+        // Conteúdo condicional: upload só se puder enviar
         container.innerHTML = `
           ${htmlAnos}
           <hr>
-          <h4 class="mb-3">Enviar Balancete do Fundo Selecionado</h4>
-          <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-
-            <input type="hidden" name="fundo_id" value="${fundoId}">
-
-            <div class="row">
-              <div class="col-md-2 mb-3">
-                <label for="ano-df" class="form-label">Ano</label>
-                <input type="number" class="form-control" id="ano-df" name="ano" required>
+          {% if can_enviar_balancete %}
+            <h4 class="mb-3">Enviar Balancete do Fundo Selecionado</h4>
+            <form method="POST" enctype="multipart/form-data" aria-label="Formulário para enviar balancete">
+              {% csrf_token %}
+              <input type="hidden" name="fundo_id" value="\${fundoId}">
+              <div class="row">
+                <div class="col-md-2 mb-3">
+                  <label for="ano-df" class="form-label">Ano</label>
+                  <input type="number" class="form-control" id="ano-df" name="ano" required aria-required="true" min="1900" max="2100">
+                </div>
+                <div class="col-md-10 mb-3">
+                  <label for="arquivo-df" class="form-label">Upload da Planilha</label>
+                  <input type="file" class="form-control" id="arquivo-df" name="planilha" accept=".xlsx,.xls" required aria-required="true">
+                  <div class="form-text">Formatos aceitos: .xlsx ou .xls</div>
+                </div>
               </div>
-
-              <div class="col-md-10 mb-3">
-                <label for="arquivo-df" class="form-label">Upload da Planilha</label>
-                <input type="file" class="form-control" id="arquivo-df" name="planilha" accept=".xlsx,.xls" required>
+              <div class="d-flex justify-content-center gap-3 mt-3">
+                <a href="{% url 'download_modelo_balancete' %}" class="btn btn-success">
+                  Baixar Modelo de Balancete <i class="bi bi-file-earmark-excel-fill ms-2" aria-hidden="true"></i>
+                </a>
+                <button type="submit" class="btn btn-primary">
+                  Enviar Balancete <i class="bi bi-upload ms-2" aria-hidden="true"></i>
+                </button>
               </div>
+            </form>
+          {% else %}
+            <div class="alert alert-secondary d-flex align-items-center" role="alert">
+              <i class="bi bi-eye me-2" aria-hidden="true"></i>
+              Você não tem permissão para enviar balancete neste contexto. (Visualização apenas)
             </div>
-
-            <div class="d-flex justify-content-center gap-3 mt-3">
-              <a href="{% url 'download_modelo_balancete' %}" class="btn btn-success">
-                Baixar Modelo de Balancete <i class="bi bi-file-earmark-excel-fill ms-2"></i>
-              </a>
-              <button type="submit" class="btn btn-primary">
-                Enviar Balancete <i class="bi bi-upload ms-2"></i>
-              </button>
-            </div>
-          </form>
+            <a href="{% url 'download_modelo_balancete' %}" class="btn btn-success">
+              Baixar Modelo de Balancete <i class="bi bi-file-earmark-excel-fill ms-2" aria-hidden="true"></i>
+            </a>
+          {% endif %}
         `;
       });
-    }
-
-    // Pega o CSRF token do cookie
-    function getCSRFToken() {
-      const name = 'csrftoken';
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith(name + '=')) {
-          return decodeURIComponent(cookie.substring(name.length + 1));
-        }
-      }
-      return '';
     }
   });
 </script>

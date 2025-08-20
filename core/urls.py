@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from .views import *
 from usuarios.views import trocar_empresa_ativa
@@ -10,6 +10,7 @@ urlpatterns = [
     path('perfil/', editar_perfil, name='editar_perfil'),
     path('trocar-empresa/', trocar_empresa_ativa, name='trocar_empresa_ativa'),
 
+    path("", include("usuarios.urls")),
 
     # Demonstração Financeira
     path('', demonstracao_financeira, name='demonstracao_financeira'),

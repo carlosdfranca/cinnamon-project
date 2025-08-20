@@ -1,0 +1,233 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Gerenciar Usuários{% endblock %}
+
+{% block conteudo %}
+{% include 'base/navbar.html' %}
+
+<div class="container py-4">
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Usuários da empresa: <span class="fw-bold">{{ empresa.nome }}</span></h4>
+        {% if can_manage %}
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAddUser">
+            <i class="bi bi-person-plus me-1"></i> Novo Usuário
+          </button>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped align-middle" id="tabela-usuarios">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 20%;">Nome</th>
+              <th scope="col" style="width: 20%;">Username</th>
+              <th scope="col" style="width: 30%;">Email</th>
+              <th scope="col" style="width: 10%;" class="text-center">Papel</th>
+              {% if can_manage %}
+                <th scope="col" style="width: 10%;" class="text-center">Editar</th>
+                <th scope="col" style="width: 10%;" class="text-center">Remover</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in memberships %}
+              <tr>
+                <td class="fw-semibold">{{ m.usuario.first_name|default:"—" }}</td>
+                <td>{{ m.usuario.username }}</td>
+                <td>{{ m.usuario.email|default:"—" }}</td>
+                <td class="text-center">
+                  {% if m.role == "MASTER" %}
+                    <span class="badge bg-dark">MASTER</span>
+                  {% elif m.role == "ADMIN" %}
+                    <span class="badge bg-primary">ADMIN</span>
+                  {% elif m.role == "MEMBER" %}
+                    <span class="badge bg-success">MEMBER</span>
+                  {% else %}
+                    <span class="badge bg-secondary">VIEWER</span>
+                  {% endif %}
+                </td>
+
+                {% if can_manage %}
+                <td class="text-center">
+                  <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditUser{{ m.id }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteUser{{ m.id }}">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </td>
+                {% endif %}
+              </tr>
+
+              {% if can_manage %}
+              <!-- Modal Editar -->
+              <div class="modal fade" id="modalEditUser{{ m.id }}" tabindex="-1" aria-labelledby="modalEditUserLabel{{ m.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form method="POST" action="{% url 'empresa_usuario_editar' m.id %}">
+                      {% csrf_token %}
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="modalEditUserLabel{{ m.id }}">Editar Usuário</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="mb-3">
+                          <label class="form-label">Nome</label>
+                          <input type="text" name="first_name" class="form-control" value="{{ m.usuario.first_name }}">
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Email</label>
+                          <input type="email" name="email" class="form-control" value="{{ m.usuario.email }}">
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Papel na empresa</label>
+                          <select name="role" class="form-select">
+                            {% if can_assign_master %}
+                              <option value="MASTER" {% if m.role == "MASTER" %}selected{% endif %}>MASTER</option>
+                            {% endif %}
+                            <option value="ADMIN" {% if m.role == "ADMIN" %}selected{% endif %}>ADMIN</option>
+                            <option value="MEMBER" {% if m.role == "MEMBER" %}selected{% endif %}>MEMBER</option>
+                            <option value="VIEWER" {% if m.role == "VIEWER" %}selected{% endif %}>VIEWER</option>
+                          </select>
+                          {% if not can_assign_master and m.role == "MASTER" %}
+                            <div class="form-text text-danger">Apenas MASTER ou Global Admin pode alterar o MASTER.</div>
+                          {% endif %}
+                        </div>
+                        <hr>
+                        <div class="mb-3">
+                          <label class="form-label">Nova senha (opcional)</label>
+                          <input type="password" name="password1" class="form-control" autocomplete="new-password">
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Confirmar nova senha</label>
+                          <input type="password" name="password2" class="form-control" autocomplete="new-password">
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modal Remover -->
+              <div class="modal fade" id="modalDeleteUser{{ m.id }}" tabindex="-1" aria-labelledby="modalDeleteUserLabel{{ m.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form method="POST" action="{% url 'empresa_usuario_excluir' m.id %}">
+                      {% csrf_token %}
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="modalDeleteUserLabel{{ m.id }}">Remover Vínculo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                      </div>
+                      <div class="modal-body">
+                        Tem certeza que deseja remover o vínculo de <strong>{{ m.usuario }}</strong> com a empresa <strong>{{ empresa.nome }}</strong>?
+                        {% if m.role == "MASTER" %}
+                          <div class="alert alert-warning mt-3">
+                            Este usuário é o MASTER atual. Transfira a função de MASTER antes de remover.
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">Remover</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if can_manage %}
+<!-- Modal Adicionar Usuário -->
+<div class="modal fade" id="modalAddUser" tabindex="-1" aria-labelledby="modalAddUserLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'empresa_usuario_adicionar' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalAddUserLabel">Novo Usuário</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" name="first_name" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Papel na empresa</label>
+            <select name="role" class="form-select">
+              {% if can_assign_master %}<option value="MASTER">MASTER</option>{% endif %}
+              <option value="ADMIN">ADMIN</option>
+              <option value="MEMBER">MEMBER</option>
+              <option value="VIEWER">VIEWER</option>
+            </select>
+            {% if not can_assign_master %}
+              <div class="form-text">Apenas MASTER ou Global Admin pode criar/promover MASTER.</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Senha</label>
+            <input type="password" name="password1" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Confirmar senha</label>
+            <input type="password" name="password2" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Salvar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function () {
+    $('#tabela-usuarios').DataTable({
+      language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+      {% if can_manage %}columnDefs: [{ orderable: false, targets: [4,5] }]{% endif %}
+    });
+  });
+</script>
+{% endblock %}

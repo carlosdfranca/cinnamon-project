@@ -18,6 +18,15 @@
     </a>
   </div>
 
+  <!-- Link Gerenciar Usuários (quem PODE VER: globais ou MASTER/ADMIN) -->
+  {% if user_can_view_company_users %}
+  <div class="ms-1">
+    <a href="{% url 'gerenciar_usuarios' %}" class="nav-link px-3 text-dark">
+      Gerenciar Usuários
+    </a>
+  </div>
+  {% endif %}
+
   <!-- Seletor de Empresa: SOMENTE para usuários globais -->
   <div class="ms-3 d-flex align-items-center">
     {% if user_is_global and empresas_disponiveis %}

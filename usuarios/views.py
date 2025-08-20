@@ -22,7 +22,6 @@ def trocar_empresa_ativa(request):
     # Validação: global pode tudo; senão, precisa vínculo ativo
     if getattr(user, "has_global_scope", None) and user.has_global_scope():
         set_empresa_ativa(request, empresa.id)
-        messages.success(request, f"Empresa ativa: {empresa.nome}")
         return redirect(request.META.get("HTTP_REFERER", "/"))
 
     tem_vinculo = Membership.objects.filter(
@@ -33,5 +32,4 @@ def trocar_empresa_ativa(request):
         return redirect(request.META.get("HTTP_REFERER", "/"))
 
     set_empresa_ativa(request, empresa.id)
-    messages.success(request, f"Empresa ativa: {empresa.nome}")
     return redirect(request.META.get("HTTP_REFERER", "/"))

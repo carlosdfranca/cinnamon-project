@@ -7,11 +7,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from df.models import Fundo, BalanceteItem
 from usuarios.models import Empresa, Membership
-from usuarios.utils.company_scope import query_por_empresa_ativa  # << NOVO
+from usuarios.utils.company_scope import query_por_empresa_ativa
+from usuarios.permissions import (
+    company_can_view_data,
+    company_can_manage_fundos,
+    get_empresa_escopo,
+    role_na_empresa,
+    is_global_admin,
+)
 
 from .forms import FundoForm
 
-# Camadas novas
+# Camadas novas (seu core)
 from core.upload.balancete_parser import parse_excel, BalanceteSchemaError
 from core.processing.import_service import import_balancete
 from core.processing.dre_service import gerar_dados_dre
@@ -21,6 +28,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 
 
+# --------- helpers de escopo/flags para UI ---------
 def _empresas_do_usuario(user):
     has_global = getattr(user, "has_global_scope", None)
     if has_global and user.has_global_scope():
@@ -28,11 +36,24 @@ def _empresas_do_usuario(user):
     empresa_ids = Membership.objects.filter(usuario=user, is_active=True).values_list("empresa_id", flat=True)
     return Empresa.objects.filter(id__in=list(empresa_ids))
 
+def _can_manage_fundos(request):
+    """
+    Habilita botões na UI de Fundos conforme a mesma regra do decorator company_can_manage_fundos.
+    """
+    empresa = get_empresa_escopo(request)
+    if not empresa:
+        return False
+    if is_global_admin(request.user):
+        return True
+    user_role = role_na_empresa(request.user, empresa)
+    return user_role in {Membership.Role.MASTER, Membership.Role.ADMIN, Membership.Role.MEMBER}
+
 
 # ===============================
-# PÁGINA: Demonstração Financeira
+# PÁGINA: Demonstração Financeira (view-only; POST = importar -> precisa poder GERENCIAR)
 # ===============================
 @login_required
+@company_can_view_data
 def demonstracao_financeira(request):
     fundos_qs = query_por_empresa_ativa(
         Fundo.objects.select_related("empresa"),
@@ -46,22 +67,35 @@ def demonstracao_financeira(request):
         anos = BalanceteItem.objects.filter(fundo=fundo).values_list("ano", flat=True).distinct()
         fundos_anos[fundo.id] = sorted(set(anos), reverse=True)
 
+    # IMPORTAÇÃO = ação de GERENCIAR (bloqueia VIEWER)
     if request.method == "POST":
+        if not _can_manage_fundos(request):
+            messages.error(request, "Você não tem permissão para importar balancete.")
+            return redirect("demonstracao_financeira")
+
         fundo_id = request.POST.get("fundo_id")
         ano_str = request.POST.get("ano")
         arquivo = request.FILES.get("planilha")
 
         if not ano_str:
             messages.error(request, "O campo Ano é obrigatório.")
-            return render(request, "demonstracao_financeira.html", {"fundos": fundos, "fundos_anos": fundos_anos})
+            return render(request, "demonstracao_financeira.html", {
+                "fundos": fundos,
+                "fundos_anos": fundos_anos,
+                "can_enviar_balancete": _can_manage_fundos(request),
+            })
         try:
             ano = int(ano_str)
         except ValueError:
             messages.error(request, "Ano inválido.")
-            return render(request, "demonstracao_financeira.html", {"fundos": fundos, "fundos_anos": fundos_anos})
+            return render(request, "demonstracao_financeira.html", {
+                "fundos": fundos,
+                "fundos_anos": fundos_anos,
+                "can_enviar_balancete": _can_manage_fundos(request),
+            })
 
-        fundo_qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
-        fundo = get_object_or_404(fundo_qs, id=fundo_id)
+        fundo_qs2 = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
+        fundo = get_object_or_404(fundo_qs2, id=fundo_id)
 
         if not arquivo:
             messages.error(request, "Selecione um arquivo XLSX ou CSV.")
@@ -82,7 +116,7 @@ def demonstracao_financeira(request):
             messages.warning(
                 request,
                 f"Importação concluída: {report.imported} inseridos, {report.updated} atualizados, "
-                f"{report.ignored} ignorados. Erros: {len(report.errors)} (ex.: contas sem mapeamento)."
+                f"{report.ignored} ignorados. Erros: {len(report.errors)}."
             )
         else:
             messages.success(
@@ -91,24 +125,29 @@ def demonstracao_financeira(request):
             )
         return redirect("demonstracao_financeira")
 
+    # GET
     return render(request, "demonstracao_financeira.html", {
         "fundos": fundos,
-        "fundos_anos": fundos_anos
+        "fundos_anos": fundos_anos,
+        "can_enviar_balancete": _can_manage_fundos(request),
     })
 
 
+
 @login_required
+@company_can_view_data
 def download_modelo_balancete(request):
     caminho_arquivo = os.path.join(settings.STATIC_ROOT, "modelos", "modelo_balancete.xlsx")
     if settings.DEBUG:
         caminho_arquivo = os.path.join(settings.BASE_DIR, "static", "modelos", "modelo_balancete.xlsx")
-    return FileResponse(open(caminho_arquivo, "rb"), as_attachment=True, filename="Modelo Balancete.xlsx")
+    return FileResponse(open(canho_arquivo := caminho_arquivo, "rb"), as_attachment=True, filename="Modelo Balancete.xlsx")
 
 
 # ===============================
-# DRE (visualização/exportação)
+# DRE (visualização/exportação) — view-only
 # ===============================
 @login_required
+@company_can_view_data
 def dre_resultado(request, fundo_id, ano):
     fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
@@ -124,6 +163,7 @@ def dre_resultado(request, fundo_id, ano):
 
 
 @login_required
+@company_can_view_data
 def exportar_dre_excel(request, fundo_id, ano):
     fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
@@ -186,7 +226,7 @@ def exportar_dre_excel(request, fundo_id, ano):
 
     # Cabeçalho das datas
     ws.append(["", f"31/12/{ano}", "", f"31/12/{ano - 1}"])
-    ws.append([])  # Linha em branco
+    ws.append([])
 
     row_header = ws.max_row
     for col in (2, 4):
@@ -218,7 +258,7 @@ def exportar_dre_excel(request, fundo_id, ano):
                 cell.alignment = right
                 cell.number_format = "#,##0_);(#,##0)"
 
-        ws.append([])  # Linha em branco entre grupos
+        ws.append([])
 
     # Resultado do exercício
     row = ws.max_row
@@ -246,7 +286,6 @@ def exportar_dre_excel(request, fundo_id, ano):
     for col_num, width in col_widths.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
 
-    # Resposta
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
@@ -260,6 +299,7 @@ def exportar_dre_excel(request, fundo_id, ano):
 # CRUD de Fundos (multiempresa)
 # ===========================
 @login_required
+@company_can_view_data
 def listar_fundos(request):
     fundos = query_por_empresa_ativa(
         Fundo.objects.select_related("empresa"),
@@ -267,10 +307,14 @@ def listar_fundos(request):
         "empresa",
     ).order_by("nome")
     form = FundoForm()
-    return render(request, "fundos/listar.html", {"fundos": fundos, "form": form})
-
+    return render(request, "fundos/listar.html", {
+        "fundos": fundos,
+        "form": form,
+        "can_manage_fundos": _can_manage_fundos(request),
+    })
 
 @login_required
+@company_can_manage_fundos
 def adicionar_fundo(request):
     if request.method == "POST":
         form = FundoForm(request.POST)
@@ -283,7 +327,7 @@ def adicionar_fundo(request):
             empresa_id_post = (
                 request.POST.get("empresa")
                 or request.POST.get("empresa_id")
-                or (empresa_ativa.id if empresa_ativa else None)  # Fallback para empresa ativa da navbar
+                or (empresa_ativa.id if empresa_ativa else None)
                 or request.session.get("empresa_ativa_id")
             )
 
@@ -313,8 +357,8 @@ def adicionar_fundo(request):
         form = FundoForm()
     return render(request, "fundos/form.html", {"form": form, "modo": "Adicionar"})
 
-
 @login_required
+@company_can_manage_fundos
 def editar_fundo(request, fundo_id):
     qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
     fundo = get_object_or_404(qs, id=fundo_id)
@@ -340,8 +384,8 @@ def editar_fundo(request, fundo_id):
         form = FundoForm(instance=fundo)
     return render(request, "fundos/form.html", {"form": form, "modo": "Editar"})
 
-
 @login_required
+@company_can_manage_fundos
 def excluir_fundo(request, fundo_id):
     qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
     fundo = get_object_or_404(qs, id=fundo_id)
