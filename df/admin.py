@@ -22,9 +22,9 @@ class FundoAdmin(TenantScopedAdminMixin, admin.ModelAdmin):
 
 @admin.register(MapeamentoContas)
 class MapeamentoContasAdmin(admin.ModelAdmin):
-    list_display = ("conta", "grupo_df", "tipo")
-    list_filter = ("tipo", "grupo_df")
-    search_fields = ("conta", "grupo_df", "descricao")
+    list_display = ("conta", "grupo_df", "tipo", "descricao")
+    list_filter = ("tipo", )
+    search_fields = ("conta", )
     ordering = ("tipo", "grupo_df", "conta")
 
 @admin.register(BalanceteItem)

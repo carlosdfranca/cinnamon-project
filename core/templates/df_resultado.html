@@ -1,0 +1,114 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %}Demonstração Financeira{% endblock %}
+
+{% block conteudo %}
+<!-- Navbar -->
+{% include 'base/navbar.html' %}
+
+<div class="container mt-4">
+  <div class="card shadow rounded p-4">
+
+    <!-- Cabeçalho -->
+
+    <div class="row mb-4">
+      <div class="col-md-9">
+        <div class="fw-bold" style="font-size: 1.05rem;">
+          {{ fundo.nome|upper }}
+        </div>
+        <div class="fw-bold">
+          CNPJ: {{ fundo.cnpj }}
+        </div>
+        <div class="mt-2">
+          {{ fundo.empresa.nome }}
+        </div>
+        <div>
+          CNPJ: {{ fundo.empresa.cnpj }}
+        </div>
+      </div>
+      <div class="col-md-3 text-end">
+        <a href="{% url 'exportar_dre_excel' fundo.id ano %}" class="btn btn-success">Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i></a>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs d-flex" id="myTabjustified" role="tablist">
+      <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link w-100 active" id="dpf-tab" data-bs-toggle="tab" data-bs-target="#dpf-justified" type="button" role="tab" aria-controls="dpf" aria-selected="true">DPF</button>
+      </li>
+      <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link w-100" id="dre-tab" data-bs-toggle="tab" data-bs-target="#dre-justified" type="button" role="tab" aria-controls="dre" aria-selected="false">DRE</button>
+      </li>
+      <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link w-100" id="dmpl-tab" data-bs-toggle="tab" data-bs-target="#dmpl-justified" type="button" role="tab" aria-controls="dmpl" aria-selected="false">DMPL</button>
+      </li>
+      <li class="nav-item flex-fill" role="presentation">
+        <button class="nav-link w-100" id="dfc-tab" data-bs-toggle="tab" data-bs-target="#dfc-justified" type="button" role="tab" aria-controls="dfc" aria-selected="false">DFC</button>
+      </li>
+    </ul>
+    <div class="tab-content pt-2" id="myTabjustifiedContent">
+      <div class="tab-pane fade show active" id="dpf-justified" role="tabpanel" aria-labelledby="dpf-tab">
+        Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Tempora libero non est unde veniam est qui dolor. Ut sunt iure rerum quae quisquam autem eveniet perspiciatis odit. Fuga sequi sed ea saepe at unde.
+      </div>
+      <div class="tab-pane fade" id="dre-justified" role="tabpanel" aria-labelledby="dre-tab">
+        <div class="fw-bold mt-3">
+          Demonstração do Resultado do Exercício
+        </div>
+        <div class="fw-bold">
+          Exercícios findos em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+        </div>
+        <div class="fst-italic" style="font-size: 0.85rem;">
+          (Valores expressos em milhares de reais)
+        </div>
+        <!-- Tabela com os dados do DRE-->
+        <table class="table table-bordered table-sm mt-2">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 80%">Descrição</th>
+              <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
+              <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for grupo, valores in dict_tabela.items %}
+              <tr class="table-secondary fw-bold">
+                <td colspan="1">{{ grupo }}</td>
+                <td class="text-end">{{ valores.SOMA|formata_milhar }}</td>
+                <td class="text-end">{{ valores.SOMA_ANTERIOR|formata_milhar }}</td>
+              </tr>
+              {% for subgrupo, val in valores.items %}
+                {% if subgrupo != 'SOMA' and subgrupo != 'SOMA_ANTERIOR' %}
+                  <tr>
+                    <td>{{ subgrupo }}</td>
+                    <td class="text-end">{{ val.ATUAL|formata_milhar }}</td>
+                    <td class="text-end">{{ val.ANTERIOR|formata_milhar }}</td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+
+              <tr class="border-top">
+                <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+              </tr>
+
+            {% endfor %}
+
+            <!-- Resultado do exercício -->
+            <tr class="table-secondary fw-bold">
+              <td>Resultado do exercício</td>
+              <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
+              <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pane fade" id="dmpl-justified" role="tabpanel" aria-labelledby="dmpl-tab">
+        Saepe animi et soluta ad odit soluta sunt. Nihil quos omnis animi debitis cumque. Accusantium quibusdam perspiciatis qui qui omnis magnam. Officiis accusamus impedit molestias nostrum veniam. Qui amet ipsum iure. Dignissimos fuga tempore dolor.
+      </div>
+      <div class="tab-pane fade" id="dfc-justified" role="tabpanel" aria-labelledby="dfc-tab">
+        Saepe animi et soluta ad odit soluta sunt. Nihil quos omnis animi debitis cumque. Accusantium quibusdam perspiciatis qui qui omnis magnam. Officiis accusamus impedit molestias nostrum veniam. Qui amet ipsum iure. Dignissimos fuga tempore dolor.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

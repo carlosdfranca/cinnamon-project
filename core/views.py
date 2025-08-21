@@ -138,12 +138,12 @@ def demonstracao_financeira(request):
 # ===============================
 @login_required
 @company_can_view_data
-def dre_resultado(request, fundo_id, ano):
+def df_resultado(request, fundo_id, ano):
     fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
     dict_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, int(ano))
-    return render(request, "dre_resultado.html", {
+    return render(request, "df_resultado.html", {
         "dict_tabela": dict_tabela,
         "ano": int(ano),
         "fundo": fundo,
@@ -154,7 +154,7 @@ def dre_resultado(request, fundo_id, ano):
 
 @login_required
 @company_can_view_data
-def exportar_dre_excel(request, fundo_id, ano):
+def exportar_df_excel(request, fundo_id, ano):
     fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
@@ -280,7 +280,7 @@ def exportar_dre_excel(request, fundo_id, ano):
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     nome_curto = "_".join(str(fundo.nome).replace("-", "").split())
-    response["Content-Disposition"] = f"attachment; filename=DRE_{ano}_{nome_curto}.xlsx"
+    response["Content-Disposition"] = f"attachment; filename=DFs_{ano}_{nome_curto}.xlsx"
     wb.save(response)
     return response
 

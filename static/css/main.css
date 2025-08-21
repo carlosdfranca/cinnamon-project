@@ -193,7 +193,6 @@ nav .dropdown-item:hover {
 
 /* === Datatables === */
 /* Corrige botão ativo do DataTables */
-
 .dataTables_wrapper .dataTables_paginate .page-item.active .page-link,
 .dataTables_wrapper .dataTables_paginate .page-link.active {
     background-color: var(--cor-principal) !important;
@@ -214,4 +213,69 @@ nav .dropdown-item:hover {
     .brand-logo {
         max-width: 40px;
     }
+}
+
+/* =========================
+   Tabs (Bootstrap 5)
+   ========================= */
+
+/* Barra inferior das tabs */
+.nav-tabs {
+    border-bottom: 2px solid var(--cor-principal);
+}
+
+/* Abas inativas: tira borda padrão e ajusta cor do texto */
+.nav-tabs .nav-link {
+    border: none;
+    color: var(--cor-secundaria);            /* texto das abas inativas */
+    background-color: transparent;
+    font-weight: 600;
+}
+
+/* Hover/focus nas inativas */
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    color: var(--cor-principal);
+    background-color: rgba(184, 98, 49, 0.08); /* leve hint da cor principal */
+    border: none;
+}
+
+/* Aba ativa: usa 100% a paleta */
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: var(--texto-claro);
+    background-color: var(--cor-principal);
+    border: none;
+    box-shadow: 0 0 0 1px var(--cor-principal); /* borda óptica para recorte */
+}
+
+/* Ajuste para melhor clique em mobile */
+.nav-tabs .nav-link {
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem 0.5rem 0 0; /* cantos levemente arredondados em cima */
+}
+
+/* Acessibilidade: foco por teclado bem visível */
+.nav-tabs .nav-link:focus-visible {
+    outline: 3px solid var(--cor-terciária);
+    outline-offset: 2px;
+}
+
+/* Conteúdo das tabs dentro de "card" */
+.tab-card {
+    background: var(--texto-claro);
+    border: 1px solid var(--cinza-medio);
+    border-top: none;                        /* para encaixar com a barra das tabs */
+    border-radius: 0 0 10px 10px;
+    padding: 1rem;
+}
+
+/* Estado disabled (se algum dia usar) */
+.nav-tabs .nav-link.disabled,
+.nav-tabs .nav-item.show .nav-link.disabled {
+    color: var(--cinza-escuro);
+    background-color: transparent;
+    border: none;
+    opacity: 0.7;
+    cursor: not-allowed;
 }
