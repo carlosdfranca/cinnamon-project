@@ -15,7 +15,7 @@ urlpatterns = [
     # Demonstração Financeira
     path('', demonstracao_financeira, name='demonstracao_financeira'),
     path('dre-resultado/<int:fundo_id>/<int:ano>/', df_resultado, name='dre_resultado'),
-    path('dre-exportar-xlsx/<int:fundo_id>/<int:ano>/', exportar_df_excel, name='exportar_dre_excel'),
+    path('dre-exportar-xlsx/<int:fundo_id>/<int:ano>/', exportar_dfs_excel, name='exportar_dre_excel'),
 
 
     # Fundos

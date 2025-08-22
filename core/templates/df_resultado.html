@@ -48,9 +48,149 @@
       </li>
     </ul>
     <div class="tab-content pt-2" id="myTabjustifiedContent">
+      <!-- DPF -->
       <div class="tab-pane fade show active" id="dpf-justified" role="tabpanel" aria-labelledby="dpf-tab">
-        Sunt est soluta temporibus accusantium neque nam maiores cumque temporibus. Tempora libero non est unde veniam est qui dolor. Ut sunt iure rerum quae quisquam autem eveniet perspiciatis odit. Fuga sequi sed ea saepe at unde.
+        <div class="fw-bold mt-3">
+          Demonstração da Posição Financeira
+        </div>
+        <div class="fw-bold">
+          Em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+        </div>
+        <div class="fst-italic" style="font-size: 0.85rem;">
+          (Valores expressos em milhares de reais, exceto quando apresentado de outra forma)											
+        </div>
+        
+        <!-- Tabela com os dados do DPF-->         
+        <table class="table table-bordered table-sm mt-2">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 60%">Descrição</th>
+              <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
+              <th style="width: 10%" class="text-end">% PL {{ ano }}</th>
+              <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
+              <th style="width: 10%" class="text-end">% PL {{ ano|add:"-1" }}</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {# ====== ATIVO ====== #}
+            {% with secao=dpf_tabela.ATIVO %}
+              {% for grupo_label, bloco in secao.items %}
+                {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
+                  <tr class="table-secondary fw-bold">
+                    <td colspan="1">{{ grupo_label }}</td>
+                    <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+                  </tr>
+
+                  {% for subgrupo, valores in bloco.items %}
+                    {% if subgrupo not in 'SOMA,SOMA_ANTERIOR,PERC_ATUAL,PERC_ANTERIOR' %}
+                      <tr>
+                        <td>{{ subgrupo }}</td>
+                        <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+
+                  <tr class="border-top">
+                    <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+
+              <!-- TOTAL ATIVO -->
+              <tr class="table-secondary fw-bold">
+                <td>TOTAL ATIVO</td>
+                <td class="text-end">{{ secao.TOTAL_ATIVO.ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_ATIVO.ANTERIOR|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+              </tr>
+            {% endwith %}
+
+            <!-- Separador entre seções -->
+            <tr class="border-top">
+              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+            </tr>
+
+            {# ====== PASSIVO ====== #}
+            {% with secao=dpf_tabela.PASSIVO %}
+              {% for grupo_label, bloco in secao.items %}
+                {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
+                  <tr class="table-secondary fw-bold">
+                    <td colspan="1">{{ grupo_label }}</td>
+                    <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
+                    <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+                  </tr>
+
+                  {% for subgrupo, valores in bloco.items %}
+                    {% if subgrupo not in 'SOMA,SOMA_ANTERIOR,PERC_ATUAL,PERC_ANTERIOR' %}
+                      <tr>
+                        <td>{{ subgrupo }}</td>
+                        <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
+                        <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+
+                  <tr class="border-top">
+                    <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+
+              <!-- TOTAL PASSIVO -->
+              <tr class="table-secondary fw-bold">
+                <td>TOTAL PASSIVO</td>
+                <td class="text-end">{{ secao.TOTAL_PASSIVO.ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_PASSIVO.ANTERIOR|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+              </tr>
+            {% endwith %}
+
+            <!-- Separador entre seções -->
+            <tr class="border-top">
+              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+            </tr>
+
+            <!-- PL -->
+            <tr class="table-secondary fw-bold">
+              <td>Patrimônio líquido</td>
+              <td class="text-end">{{ pl_ajustado_atual|formata_milhar }}</td>
+              <td class="text-end">-</td>
+              <td class="text-end">{{ pl_ajustado_anterior|formata_milhar }}</td>
+              <td class="text-end">-</td>
+            </tr>
+
+            <!-- Separador entre seções -->
+            <tr class="border-top">
+              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+            </tr>
+
+            <!-- PL + PASSIVO -->
+            <tr class="table-secondary fw-bold">
+              <td>Total do patrimônio líquido e do passivo</td>
+              <td class="text-end">{{ total_pl_passivo_atual|formata_milhar }}</td>
+              <td class="text-end">{{ perc_total_pl_passivo_atual|formata_milhar }}</td>
+              <td class="text-end">{{ total_pl_passivo_anterior|formata_milhar }}</td>
+              <td class="text-end">{{ perc_total_pl_passivo_anterior|formata_milhar }}</td>
+            </tr>
+
+          </tbody>
+        </table>
       </div>
+
+      <!-- DRE -->
       <div class="tab-pane fade" id="dre-justified" role="tabpanel" aria-labelledby="dre-tab">
         <div class="fw-bold mt-3">
           Demonstração do Resultado do Exercício
@@ -61,6 +201,7 @@
         <div class="fst-italic" style="font-size: 0.85rem;">
           (Valores expressos em milhares de reais)
         </div>
+
         <!-- Tabela com os dados do DRE-->
         <table class="table table-bordered table-sm mt-2">
           <thead class="table-light">
@@ -71,7 +212,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for grupo, valores in dict_tabela.items %}
+            {% for grupo, valores in dre_tabela.items %}
               <tr class="table-secondary fw-bold">
                 <td colspan="1">{{ grupo }}</td>
                 <td class="text-end">{{ valores.SOMA|formata_milhar }}</td>
@@ -102,9 +243,13 @@
           </tbody>
         </table>
       </div>
+
+      <!-- DMPL -->
       <div class="tab-pane fade" id="dmpl-justified" role="tabpanel" aria-labelledby="dmpl-tab">
         Saepe animi et soluta ad odit soluta sunt. Nihil quos omnis animi debitis cumque. Accusantium quibusdam perspiciatis qui qui omnis magnam. Officiis accusamus impedit molestias nostrum veniam. Qui amet ipsum iure. Dignissimos fuga tempore dolor.
       </div>
+
+      <!-- DFC -->
       <div class="tab-pane fade" id="dfc-justified" role="tabpanel" aria-labelledby="dfc-tab">
         Saepe animi et soluta ad odit soluta sunt. Nihil quos omnis animi debitis cumque. Accusantium quibusdam perspiciatis qui qui omnis magnam. Officiis accusamus impedit molestias nostrum veniam. Qui amet ipsum iure. Dignissimos fuga tempore dolor.
       </div>
