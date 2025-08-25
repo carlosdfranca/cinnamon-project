@@ -22,7 +22,7 @@
   {% if fundos %}
     <div class="card shadow rounded p-4">
       <h4 class="mb-3">Selecionar Fundo</h4>
-      <select class="form-select" id="select-fundo" aria-label="Escolha um fundo para visualizar ou enviar DRE">
+      <select class="form-select" id="select-fundo" aria-label="Escolha um fundo para visualizar ou enviar DF">
         <option selected disabled>Escolha um fundo</option>
         {% for fundo in fundos %}
           <option value="{{ fundo.id }}">{{ fundo.nome }} ({{ fundo.cnpj }})</option>
@@ -34,7 +34,7 @@
       </div>
     </div>
   {% else %}
-    <div class="alert alert-warning text-center mt-5">
+    <div class="alert alert-warning text-center mt-5" role="alert">
       Você ainda não adicionou nenhum fundo.
       {% if can_enviar_balancete %}
         <a href="{% url 'listar_fundos' %}" class="alert-link">Clique aqui para cadastrar seu primeiro fundo.</a>
@@ -50,66 +50,137 @@
     const selectFundo = document.getElementById("select-fundo");
     const container = document.getElementById("df-container");
 
-    // Dados com os anos disponíveis para cada fundo (passados do Django via context)
+    // Anos disponíveis por fundo (injeção do Django)
     const anosPorFundo = {{ fundos_anos|safe }};
 
+    function renderConteudo(fundoId) {
+      let htmlAnos = "";
+      if (anosPorFundo[fundoId] && anosPorFundo[fundoId].length > 0) {
+        htmlAnos += `
+          <div class="mb-3">
+            <h6 class="text-muted">Anos com dados:</h6>
+            <div class="d-flex flex-wrap gap-2">
+        `;
+        anosPorFundo[fundoId].forEach(ano => {
+          htmlAnos += `
+            <a href="/dre-resultado/${fundoId}/${ano}/" class="btn btn-outline-primary" aria-label="Abrir DRE do ano ${ano}">
+              ${ano}
+            </a>`;
+        });
+        htmlAnos += `</div></div>`;
+      } else {
+        htmlAnos = `<div class="alert alert-info" role="status">Os dados para esse fundo ainda não foram enviados.</div>`;
+      }
+
+      // Formulário único para enviar Balancete + MEC juntos
+      // Nomes dos campos devem bater com a view: arquivo_balancete, arquivo_mec, ano, fundo_id
+      container.innerHTML = `
+        ${htmlAnos}
+        <hr>
+        {% if can_enviar_balancete %}
+          <h4 class="mb-3">Enviar Balancete + MEC</h4>
+          <form method="POST" enctype="multipart/form-data" aria-label="Formulário para enviar Balancete e MEC" id="form-upload-df">
+            {% csrf_token %}
+            <input type="hidden" name="fundo_id" value="${fundoId}">
+
+            <div class="row g-3">
+              <div class="col-md-2">
+                <label for="ano-df" class="form-label">Ano</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="ano-df"
+                  name="ano"
+                  required
+                  aria-required="true"
+                  min="1900"
+                  max="2100"
+                  placeholder="AAAA"
+                >
+                <div class="form-text">Informe o ano de referência das DFs.</div>
+              </div>
+
+              <div class="col-md-5">
+                <label for="arquivo-balancete" class="form-label">Planilha do Balancete</label>
+                <input
+                  type="file"
+                  class="form-control"
+                  id="arquivo-balancete"
+                  name="arquivo_balancete"
+                  accept=".xlsx,.xls,.csv"
+                  required
+                  aria-required="true"
+                >
+                <div class="form-text">Formatos aceitos: .xlsx, .xls ou .csv</div>
+              </div>
+
+              <div class="col-md-5">
+                <label for="arquivo-mec" class="form-label">Planilha do MEC</label>
+                <input
+                  type="file"
+                  class="form-control"
+                  id="arquivo-mec"
+                  name="arquivo_mec"
+                  accept=".xlsx,.xls,.csv"
+                  required
+                  aria-required="true"
+                >
+                <div class="form-text">Formatos aceitos: .xlsx, .xls ou .csv</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-center mt-4 gap-2">
+              <button type="submit" class="btn btn-primary" id="btn-enviar" disabled>
+                Enviar DFs <i class="bi bi-upload ms-2" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="btn btn-secondary" id="btn-limpar">
+                Limpar <i class="bi bi-eraser ms-2" aria-hidden="true"></i>
+              </button>
+            </div>
+          </form>
+        {% else %}
+          <div class="alert alert-secondary d-flex align-items-center" role="alert">
+            <i class="bi bi-eye me-2" aria-hidden="true"></i>
+            Você não tem permissão para enviar arquivos neste contexto. (Visualização apenas)
+          </div>
+        {% endif %}
+      `;
+
+      // Validação client-side: só habilita o envio quando ano + 2 arquivos estiverem preenchidos
+      const anoInput = document.getElementById("ano-df");
+      const balInput = document.getElementById("arquivo-balancete");
+      const mecInput = document.getElementById("arquivo-mec");
+      const btnEnviar = document.getElementById("btn-enviar");
+      const btnLimpar = document.getElementById("btn-limpar");
+      const form = document.getElementById("form-upload-df");
+
+      function validar() {
+        const anoOk = !!anoInput?.value;
+        const balOk = !!balInput?.files?.length;
+        const mecOk = !!mecInput?.files?.length;
+        btnEnviar.disabled = !(anoOk && balOk && mecOk);
+      }
+
+      ["change", "input"].forEach(evt => {
+        anoInput?.addEventListener(evt, validar);
+        balInput?.addEventListener(evt, validar);
+        mecInput?.addEventListener(evt, validar);
+      });
+      validar();
+
+      // Botão limpar: reseta o form e revalida
+      btnLimpar?.addEventListener("click", function(){
+        form?.reset();
+        validar();
+      });
+    }
+
+    // Evento de seleção do fundo
     if (selectFundo) {
       selectFundo.addEventListener("change", function () {
         const fundoId = this.value;
         container.style.display = "block";
-
-        // Gerar os botões de anos
-        let htmlAnos = "";
-        if (anosPorFundo[fundoId] && anosPorFundo[fundoId].length > 0) {
-          htmlAnos += `
-            <div class="mb-3">
-              <h6 class="text-muted">Anos com dados:</h6>
-              <div class="d-flex flex-wrap gap-2">
-          `;
-          anosPorFundo[fundoId].forEach(ano => {
-            htmlAnos += `
-              <a href="/dre-resultado/${fundoId}/${ano}/" class="btn btn-outline-primary">
-                ${ano}
-              </a>`;
-          });
-          htmlAnos += `</div></div>`;
-        } else {
-          htmlAnos = `<div class="alert alert-info">Os dados para esse fundo ainda não foram enviados.</div>`;
-        }
-
-        // Conteúdo condicional: upload só se puder enviar
-        container.innerHTML = `
-          ${htmlAnos}
-          <hr>
-          {% if can_enviar_balancete %}
-            <h4 class="mb-3">Enviar Balancete do Fundo Selecionado</h4>
-            <form method="POST" enctype="multipart/form-data" aria-label="Formulário para enviar balancete">
-              {% csrf_token %}
-              <input type="hidden" name="fundo_id" value="${fundoId}">
-              <div class="row">
-                <div class="col-md-2 mb-3">
-                  <label for="ano-df" class="form-label">Ano</label>
-                  <input type="number" class="form-control" id="ano-df" name="ano" required aria-required="true" min="1900" max="2100">
-                </div>
-                <div class="col-md-10 mb-3">
-                  <label for="arquivo-df" class="form-label">Upload da Planilha</label>
-                  <input type="file" class="form-control" id="arquivo-df" name="planilha" accept=".xlsx,.xls" required aria-required="true">
-                  <div class="form-text">Formatos aceitos: .xlsx ou .xls</div>
-                </div>
-              </div>
-              <div class="d-flex justify-content-center mt-3">
-                <button type="submit" class="btn btn-primary">
-                  Enviar Balancete <i class="bi bi-upload ms-2" aria-hidden="true"></i>
-                </button>
-              </div>
-            </form>
-          {% else %}
-            <div class="alert alert-secondary d-flex align-items-center" role="alert">
-              <i class="bi bi-eye me-2" aria-hidden="true"></i>
-              Você não tem permissão para enviar balancete neste contexto. (Visualização apenas)
-            </div>
-          {% endif %}
-        `;
+        renderConteudo(fundoId);
       });
     }
   });

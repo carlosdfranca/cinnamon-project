@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from df.models import BalanceteItem, MapeamentoContas
+from df.models import BalanceteItem, MapeamentoContas, MecItem
 
 
 @dataclass(frozen=True)
@@ -97,5 +97,43 @@ def import_balancete(*, fundo_id: int, ano: int, rows: List) -> ImportReport:
                 imported += 1
             else:
                 updated += 1
+
+    return ImportReport(imported=imported, updated=updated, ignored=ignored, errors=errors)
+
+
+@transaction.atomic
+def import_mec(*, fundo_id: int, rows: List) -> ImportReport:
+    """
+    Importa linhas canônicas (MecRowDTO) para MecItem:
+    - idempotente (update_or_create por fundo+data_posicao)
+    """
+    if not rows:
+        return ImportReport(imported=0, updated=0, ignored=0, errors=[])
+
+    imported = updated = ignored = 0
+    errors: List[ImportErrorItem] = []
+
+    for idx, r in enumerate(rows):
+        if not getattr(r, "data_posicao", None):
+            ignored += 1
+            continue
+
+        defaults = {
+            "aplicacao": _to_decimal(r.aplicacao),
+            "resgate": _to_decimal(r.resgate),
+            "estorno": _to_decimal(r.estorno),
+            "pl": _to_decimal(r.pl),
+            "qtd_cotas": _to_decimal(r.qtd_cotas),
+            "cota": _to_decimal(r.cota),
+        }
+        _, created = MecItem.objects.update_or_create(
+            fundo_id=fundo_id,
+            data_posicao=r.data_posicao,
+            defaults=defaults,
+        )
+        if created:
+            imported += 1
+        else:
+            updated += 1
 
     return ImportReport(imported=imported, updated=updated, ignored=ignored, errors=errors)

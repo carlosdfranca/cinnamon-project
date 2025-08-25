@@ -20,7 +20,8 @@ from .forms import FundoForm
 
 # Camadas novas (seu core)
 from core.upload.balancete_parser import parse_excel, BalanceteSchemaError
-from core.processing.import_service import import_balancete
+from core.upload.mec_parser import parse_excel_mec, MecSchemaError
+from core.processing.import_service import import_balancete, import_mec
 from core.processing.dre_service import gerar_dados_dre
 from core.processing.dpf_service import gerar_dados_dpf
 
@@ -69,15 +70,15 @@ def demonstracao_financeira(request):
         anos = BalanceteItem.objects.filter(fundo=fundo).values_list("ano", flat=True).distinct()
         fundos_anos[fundo.id] = sorted(set(anos), reverse=True)
 
-    # IMPORTAÇÃO = ação de GERENCIAR (bloqueia VIEWER)
     if request.method == "POST":
         if not _can_manage_fundos(request):
-            messages.error(request, "Você não tem permissão para importar balancete.")
+            messages.error(request, "Você não tem permissão para importar.")
             return redirect("demonstracao_financeira")
 
         fundo_id = request.POST.get("fundo_id")
         ano_str = request.POST.get("ano")
-        arquivo = request.FILES.get("planilha")
+        arquivo_balancete = request.FILES.get("arquivo_balancete")
+        arquivo_mec = request.FILES.get("arquivo_mec")
 
         if not ano_str:
             messages.error(request, "O campo Ano é obrigatório.")
@@ -90,49 +91,48 @@ def demonstracao_financeira(request):
             ano = int(ano_str)
         except ValueError:
             messages.error(request, "Ano inválido.")
-            return render(request, "demonstracao_financeira.html", {
-                "fundos": fundos,
-                "fundos_anos": fundos_anos,
-                "can_enviar_balancete": _can_manage_fundos(request),
-            })
+            return redirect("demonstracao_financeira")
 
         fundo_qs2 = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
         fundo = get_object_or_404(fundo_qs2, id=fundo_id)
 
-        if not arquivo:
-            messages.error(request, "Selecione um arquivo XLSX ou CSV.")
+        if not arquivo_balancete or not arquivo_mec:
+            messages.error(request, "Você precisa selecionar as duas planilhas (Balancete e MEC).")
             return redirect("demonstracao_financeira")
 
         try:
-            rows = parse_excel(arquivo)
+            rows_balancete = parse_excel(arquivo_balancete)
+            rows_mec = parse_excel_mec(arquivo_mec)
         except BalanceteSchemaError as e:
-            messages.error(request, f"Planilha inválida. Faltam colunas: {', '.join(e.missing_columns)}")
+            messages.error(request, f"Planilha do Balancete Inválida: faltam colunas {', '.join(e.missing_columns)}")
+            return redirect("demonstracao_financeira")
+        except MecSchemaError as e:
+            messages.error(request, f"Planilha do MEC Inválida: faltam colunas {', '.join(e.missing_columns)}")
             return redirect("demonstracao_financeira")
         except Exception as e:
-            messages.error(request, f"Erro ao ler o arquivo: {e}")
+            messages.error(request, f"Erro ao ler arquivos: {e}")
             return redirect("demonstracao_financeira")
 
-        report = import_balancete(fundo_id=fundo.id, ano=ano, rows=rows)
+        report_bal = import_balancete(fundo_id=fundo.id, ano=ano, rows=rows_balancete)
+        report_mec = import_mec(fundo_id=fundo.id, rows=rows_mec)
 
-        if report.errors:
-            messages.warning(
-                request,
-                f"Importação concluída: {report.imported} inseridos, {report.updated} atualizados, "
-                f"{report.ignored} ignorados. Erros: {len(report.errors)}."
-            )
+        msg = (
+            f"Balancete → {report_bal.imported} ins., {report_bal.updated} upd., {report_bal.ignored} ign. | "
+            f"MEC → {report_mec.imported} ins., {report_mec.updated} upd., {report_mec.ignored} ign."
+        )
+        if report_bal.errors or report_mec.errors:
+            messages.warning(request, "Importação concluída com erros. " + msg)
         else:
-            messages.success(
-                request,
-                f"Importação concluída: {report.imported} inseridos, {report.updated} atualizados, {report.ignored} ignorados."
-            )
+            messages.success(request, "Importação concluída com sucesso. " + msg)
+
         return redirect("demonstracao_financeira")
 
-    # GET
     return render(request, "demonstracao_financeira.html", {
         "fundos": fundos,
         "fundos_anos": fundos_anos,
         "can_enviar_balancete": _can_manage_fundos(request),
     })
+
 
 
 # ===============================
