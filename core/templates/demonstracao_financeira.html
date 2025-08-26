@@ -57,9 +57,10 @@
       let htmlAnos = "";
       if (anosPorFundo[fundoId] && anosPorFundo[fundoId].length > 0) {
         htmlAnos += `
-          <div class="mb-3">
-            <h6 class="text-muted">Anos com dados:</h6>
-            <div class="d-flex flex-wrap gap-2">
+          <hr>
+          <div class="mb-3 text-center">
+            <h6 class="text-muted mb-2">Anos com dados:</h6>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
         `;
         anosPorFundo[fundoId].forEach(ano => {
           htmlAnos += `
@@ -69,8 +70,9 @@
         });
         htmlAnos += `</div></div>`;
       } else {
-        htmlAnos = `<div class="alert alert-info" role="status">Os dados para esse fundo ainda não foram enviados.</div>`;
+        htmlAnos = `<div class="alert alert-info text-center" role="status">Os dados para esse fundo ainda não foram enviados.</div>`;
       }
+
 
       // Formulário único para enviar Balancete + MEC juntos
       // Nomes dos campos devem bater com a view: arquivo_balancete, arquivo_mec, ano, fundo_id
@@ -78,66 +80,50 @@
         ${htmlAnos}
         <hr>
         {% if can_enviar_balancete %}
-          <h4 class="mb-3">Enviar Balancete + MEC</h4>
-          <form method="POST" enctype="multipart/form-data" aria-label="Formulário para enviar Balancete e MEC" id="form-upload-df">
-            {% csrf_token %}
-            <input type="hidden" name="fundo_id" value="${fundoId}">
+          <div class="row mt-4">
+            <!-- Coluna Balancete -->
+            <div class="col-md-6 d-flex flex-column align-items-center border-end">
+              <h4 class="mb-3 text-center">Enviar Balancete</h4>
+              <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data" class="w-100 px-3">
+                {% csrf_token %}
+                <input type="hidden" name="fundo_id" value="${fundoId}">
+                
+                <div class="row mb-3">
+                  <div class="col-md-4 text-center">
+                    <label for="ano-df" class="form-label">Ano</label>
+                    <input type="number" class="form-control text-center" id="ano-df" name="ano" required min="1900" max="2100" placeholder="AAAA">
+                  </div>
 
-            <div class="row g-3">
-              <div class="col-md-2">
-                <label for="ano-df" class="form-label">Ano</label>
-                <input
-                  type="number"
-                  class="form-control"
-                  id="ano-df"
-                  name="ano"
-                  required
-                  aria-required="true"
-                  min="1900"
-                  max="2100"
-                  placeholder="AAAA"
-                >
-                <div class="form-text">Informe o ano de referência das DFs.</div>
-              </div>
+                  <div class="col-md-8 text-center">
+                    <label for="arquivo-balancete" class="form-label">Planilha Balancete</label>
+                    <input type="file" class="form-control" id="arquivo-balancete" name="arquivo_balancete" accept=".xlsx,.xls,.csv" required>
+                  </div>
+                </div>
 
-              <div class="col-md-5">
-                <label for="arquivo-balancete" class="form-label">Planilha do Balancete</label>
-                <input
-                  type="file"
-                  class="form-control"
-                  id="arquivo-balancete"
-                  name="arquivo_balancete"
-                  accept=".xlsx,.xls,.csv"
-                  required
-                  aria-required="true"
-                >
-                <div class="form-text">Formatos aceitos: .xlsx, .xls ou .csv</div>
-              </div>
-
-              <div class="col-md-5">
-                <label for="arquivo-mec" class="form-label">Planilha do MEC</label>
-                <input
-                  type="file"
-                  class="form-control"
-                  id="arquivo-mec"
-                  name="arquivo_mec"
-                  accept=".xlsx,.xls,.csv"
-                  required
-                  aria-required="true"
-                >
-                <div class="form-text">Formatos aceitos: .xlsx, .xls ou .csv</div>
-              </div>
+                <div class="d-flex justify-content-center">
+                  <button type="submit" class="btn btn-primary">Enviar Balancete</button>
+                </div>
+              </form>
             </div>
 
-            <div class="d-flex justify-content-center mt-4 gap-2">
-              <button type="submit" class="btn btn-primary" id="btn-enviar" disabled>
-                Enviar DFs <i class="bi bi-upload ms-2" aria-hidden="true"></i>
-              </button>
-              <button type="button" class="btn btn-secondary" id="btn-limpar">
-                Limpar <i class="bi bi-eraser ms-2" aria-hidden="true"></i>
-              </button>
+            <!-- Coluna MEC -->
+            <div class="col-md-6 d-flex flex-column align-items-center">
+              <h4 class="mb-3 text-center">Enviar MEC</h4>
+              <form method="POST" action="{% url 'importar_mec' %}" enctype="multipart/form-data" class="w-100 px-3">
+                {% csrf_token %}
+                <input type="hidden" name="fundo_id" value="${fundoId}">
+                
+                <div class="mb-3 text-center">
+                  <label for="arquivo-mec" class="form-label">Planilha MEC</label>
+                  <input type="file" class="form-control" id="arquivo-mec" name="arquivo_mec" accept=".xlsx,.xls,.csv" required>
+                </div>
+
+                <div class="d-flex justify-content-center">
+                  <button type="submit" class="btn btn-primary">Enviar MEC</button>
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         {% else %}
           <div class="alert alert-secondary d-flex align-items-center" role="alert">
             <i class="bi bi-eye me-2" aria-hidden="true"></i>

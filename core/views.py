@@ -24,6 +24,7 @@ from core.upload.mec_parser import parse_excel_mec, MecSchemaError
 from core.processing.import_service import import_balancete, import_mec
 from core.processing.dre_service import gerar_dados_dre
 from core.processing.dpf_service import gerar_dados_dpf
+from core.processing.dmpl_service import gerar_dados_dmpl
 
 import os
 from openpyxl import Workbook
@@ -70,68 +71,88 @@ def demonstracao_financeira(request):
         anos = BalanceteItem.objects.filter(fundo=fundo).values_list("ano", flat=True).distinct()
         fundos_anos[fundo.id] = sorted(set(anos), reverse=True)
 
-    if request.method == "POST":
-        if not _can_manage_fundos(request):
-            messages.error(request, "Você não tem permissão para importar.")
-            return redirect("demonstracao_financeira")
+    return render(request, "demonstracao_financeira.html", {
+        "fundos": fundos,
+        "fundos_anos": fundos_anos,
+        "can_enviar_balancete": _can_manage_fundos(request),
+    })
 
+# ===============================
+# IMPORTAR BALANCETE (ano + planilha)
+# ===============================
+@login_required
+@company_can_manage_fundos
+def importar_balancete_view(request):
+    if request.method == "POST":
         fundo_id = request.POST.get("fundo_id")
         ano_str = request.POST.get("ano")
         arquivo_balancete = request.FILES.get("arquivo_balancete")
-        arquivo_mec = request.FILES.get("arquivo_mec")
 
         if not ano_str:
-            messages.error(request, "O campo Ano é obrigatório.")
-            return render(request, "demonstracao_financeira.html", {
-                "fundos": fundos,
-                "fundos_anos": fundos_anos,
-                "can_enviar_balancete": _can_manage_fundos(request),
-            })
+            messages.error(request, "O campo Ano é obrigatório para o Balancete.")
+            return redirect("demonstracao_financeira")
         try:
             ano = int(ano_str)
         except ValueError:
             messages.error(request, "Ano inválido.")
             return redirect("demonstracao_financeira")
 
-        fundo_qs2 = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
-        fundo = get_object_or_404(fundo_qs2, id=fundo_id)
+        fundo_qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
+        fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
-        if not arquivo_balancete or not arquivo_mec:
-            messages.error(request, "Você precisa selecionar as duas planilhas (Balancete e MEC).")
+        if not arquivo_balancete:
+            messages.error(request, "Selecione o arquivo do Balancete.")
             return redirect("demonstracao_financeira")
 
         try:
             rows_balancete = parse_excel(arquivo_balancete)
-            rows_mec = parse_excel_mec(arquivo_mec)
+            report = import_balancete(fundo_id=fundo.id, ano=ano, rows=rows_balancete)
         except BalanceteSchemaError as e:
-            messages.error(request, f"Planilha do Balancete Inválida: faltam colunas {', '.join(e.missing_columns)}")
-            return redirect("demonstracao_financeira")
-        except MecSchemaError as e:
-            messages.error(request, f"Planilha do MEC Inválida: faltam colunas {', '.join(e.missing_columns)}")
+            messages.error(request, f"Planilha do Balancete inválida: faltam colunas {', '.join(e.missing_columns)}")
             return redirect("demonstracao_financeira")
         except Exception as e:
-            messages.error(request, f"Erro ao ler arquivos: {e}")
+            messages.error(request, f"Erro ao importar Balancete: {e}")
             return redirect("demonstracao_financeira")
 
-        report_bal = import_balancete(fundo_id=fundo.id, ano=ano, rows=rows_balancete)
-        report_mec = import_mec(fundo_id=fundo.id, rows=rows_mec)
-
-        msg = (
-            f"Balancete → {report_bal.imported} ins., {report_bal.updated} upd., {report_bal.ignored} ign. | "
-            f"MEC → {report_mec.imported} ins., {report_mec.updated} upd., {report_mec.ignored} ign."
-        )
-        if report_bal.errors or report_mec.errors:
-            messages.warning(request, "Importação concluída com erros. " + msg)
+        if report.errors:
+            messages.warning(request, f"Balancete importado com erros. {report.imported} ins., {report.updated} upd., {report.ignored} ign.")
         else:
-            messages.success(request, "Importação concluída com sucesso. " + msg)
+            messages.success(request, f"Balancete importado com sucesso. {report.imported} ins., {report.updated} upd., {report.ignored} ign.")
+    return redirect("demonstracao_financeira")
 
-        return redirect("demonstracao_financeira")
 
-    return render(request, "demonstracao_financeira.html", {
-        "fundos": fundos,
-        "fundos_anos": fundos_anos,
-        "can_enviar_balancete": _can_manage_fundos(request),
-    })
+# ===============================
+# IMPORTAR MEC (só planilha MEC)
+# ===============================
+@login_required
+@company_can_manage_fundos
+def importar_mec_view(request):
+    if request.method == "POST":
+        fundo_id = request.POST.get("fundo_id")
+        arquivo_mec = request.FILES.get("arquivo_mec")
+
+        fundo_qs = query_por_empresa_ativa(Fundo.objects.all(), request, "empresa")
+        fundo = get_object_or_404(fundo_qs, id=fundo_id)
+
+        if not arquivo_mec:
+            messages.error(request, "Selecione o arquivo do MEC.")
+            return redirect("demonstracao_financeira")
+
+        try:
+            rows_mec = parse_excel_mec(arquivo_mec)
+            report = import_mec(fundo_id=fundo.id, rows=rows_mec)
+        except MecSchemaError as e:
+            messages.error(request, f"Planilha do MEC inválida: faltam colunas {', '.join(e.missing_columns)}")
+            return redirect("demonstracao_financeira")
+        except Exception as e:
+            messages.error(request, f"Erro ao importar MEC: {e}")
+            return redirect("demonstracao_financeira")
+
+        if report.errors:
+            messages.warning(request, f"MEC importado com erros. {report.imported} ins., {report.updated} upd., {report.ignored} ign.")
+        else:
+            messages.success(request, f"MEC importado com sucesso. {report.imported} ins., {report.updated} upd., {report.ignored} ign.")
+    return redirect("demonstracao_financeira")
 
 
 
@@ -156,6 +177,9 @@ def df_resultado(request, fundo_id, ano):
 
     total_pl_passivo_atual = pl_atual + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ATUAL"] or 0)
     total_pl_passivo_anterior = pl_anterior + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ANTERIOR"] or 0)
+
+    # --- DMPL ---
+    dados_dmpl = gerar_dados_dmpl(fundo_id, int(ano))
 
     def _pct(v, base):
         try:

@@ -118,7 +118,12 @@ def parse_excel_mec(file_obj) -> List[MecRowDTO]:
     file_obj.seek(0)
 
     if name.lower().endswith(".csv"):
-        df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="utf-8", sep=None, engine="python")
+        try:
+            # Tenta abrir em UTF-8
+            df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="utf-8", sep=None, engine="python")
+        except UnicodeDecodeError:
+            # Fallback para Latin1 (ISO-8859-1)
+            df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="latin1", sep=None, engine="python")
     else:
         df = pd.read_excel(io.BytesIO(content), dtype=object)
 

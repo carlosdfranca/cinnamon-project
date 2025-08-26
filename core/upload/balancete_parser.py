@@ -154,10 +154,15 @@ def parse_excel(file_obj) -> List[BalanceteRowDTO]:
 
     # Carrega DataFrame
     if name.lower().endswith(".csv"):
-        # sep=None -> sniff automático; engine='python' lida com separadores variados
-        df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="utf-8", sep=None, engine="python")
+        try:
+            # Tenta abrir em UTF-8
+            df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="utf-8", sep=None, engine="python")
+        except UnicodeDecodeError:
+            # Fallback para Latin1 (ISO-8859-1)
+            df = pd.read_csv(io.BytesIO(content), dtype=object, encoding="latin1", sep=None, engine="python")
     else:
         df = pd.read_excel(io.BytesIO(content), dtype=object)
+
 
     if df.empty:
         raise BalanceteSchemaError(list(REQUIRED_CANONICAL_COLS), debug_info="DataFrame vazio")
