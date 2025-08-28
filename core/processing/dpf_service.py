@@ -14,7 +14,7 @@ CONTAS_DPF_PADRAO: List[str] = [
     "1.6.1.30.00.001-2",
     "1.6.1.30.00.002-9",
     "1.6.9.97.00.001-1",
-    "1.9.9.10.00.001-9",
+    "1.8.4.30.00.006-4",
     "1.8.4.30.00.001-9",
     "4.9.9.92.00.001-4",
     "4.9.9.83.00.001-6",
@@ -195,6 +195,7 @@ def gerar_dados_dpf(
     ativo_bloco, ativo_atual, ativo_ant = _montar_bloco(1, ativo_struct)
     passivo_bloco, passivo_atual, passivo_ant = _montar_bloco(2, passivo_struct)
     pl_bloco, pl_atual, pl_ant = _montar_bloco(3, pl_struct)
+    print(pl_bloco)
 
     # Totais por seção
     ativo_bloco["TOTAL_ATIVO"] = {"ATUAL": ativo_atual, "ANTERIOR": ativo_ant}
