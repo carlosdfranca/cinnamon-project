@@ -55,7 +55,13 @@ def gerar_dados_dpf(
         total_atual = 0
         total_ant = 0
 
-        grupoes = GrupoGrande.objects.prefetch_related("grupinhos").all().order_by("nome")
+        grupoes = (
+            GrupoGrande.objects
+            .prefetch_related("grupinhos")
+            .all()
+            .order_by("ordem", "nome")
+        )
+        
         for grupao in grupoes:
             grupinhos_tipo = [g for g in grupao.grupinhos.all() if g.tipo == tipo]
             if not grupinhos_tipo:

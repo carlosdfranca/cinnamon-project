@@ -26,7 +26,7 @@ class GrupoGrandeAdmin(admin.ModelAdmin):
 
 @admin.register(GrupoPequeno)
 class GrupoPequenoAdmin(admin.ModelAdmin):
-    list_display = ("nome", "grupao")
+    list_display = ("nome", "grupao", "tipo")
     list_filter = ("grupao", "tipo")
     search_fields = ("nome", "grupao__nome")
     ordering = ("grupao", "nome")

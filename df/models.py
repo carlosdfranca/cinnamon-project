@@ -40,13 +40,15 @@ class Fundo(models.Model):
 class GrupoGrande(models.Model):
     nome = models.CharField(max_length=255)
 
+    ordem = models.IntegerField(null=True, blank=True, default=None)
+
     class Meta:
         verbose_name = "Grupão de Contas"
         verbose_name_plural = "Grupões de Contas"
         ordering = ["nome"]
 
     def __str__(self):
-        return f"{self.nome} ({self.get_tipo_display()})"
+        return f"{self.nome}"
 
 
 # =========================

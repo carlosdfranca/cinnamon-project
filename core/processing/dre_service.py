@@ -46,7 +46,12 @@ def gerar_dados_dre(
     resultado_exercicio_anterior = 0
 
     # 3) Itera sobre os grupões e seus grupinhos de tipo=4
-    grupoes = GrupoGrande.objects.prefetch_related("grupinhos").all().order_by("nome")
+    grupoes = (
+        GrupoGrande.objects
+        .prefetch_related("grupinhos")
+        .all()
+        .order_by("ordem", "nome")
+    )
 
     for grupao in grupoes:
         grupinhos_resultado = [g for g in grupao.grupinhos.all() if g.tipo == 4]
