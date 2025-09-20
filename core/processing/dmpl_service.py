@@ -16,14 +16,23 @@ def gerar_dados_dmpl(fundo_id: int, ano: int):
     # ---- Quantidade de cotas movimentadas ----
     aplicacoes_qtd = Decimal("0")
     resgates_qtd = Decimal("0")
+    aplicacoes_qtd_ant = Decimal("0")
+    resgates_qtd_ant = Decimal("0")
 
     for item in qs_atual:
         if item.cota and item.cota > 0:
             aplicacoes_qtd += (item.aplicacao or Decimal("0")) / item.cota
             resgates_qtd += (item.resgate or Decimal("0")) / item.cota
+
+    for item in qs_ant:
+        if item.cota and item.cota > 0:
+            aplicacoes_qtd_ant += (item.aplicacao or Decimal("0")) / item.cota
+            resgates_qtd_ant += (item.resgate or Decimal("0")) / item.cota
     
     soma_aplic = qs_atual.aggregate(models.Sum("aplicacao"))["aplicacao__sum"] or Decimal(0)
     soma_resg = qs_atual.aggregate(models.Sum("resgate"))["resgate__sum"] or Decimal(0)
+    soma_aplic_ant = qs_ant.aggregate(models.Sum("aplicacao"))["aplicacao__sum"] or Decimal(0)
+    soma_resg_ant = qs_ant.aggregate(models.Sum("resgate"))["resgate__sum"] or Decimal(0)
 
     def _calc_valor(qtd, cota):
         return int(round((qtd * cota) / 1000, 0)) if qtd and cota else 0
@@ -37,8 +46,8 @@ def gerar_dados_dmpl(fundo_id: int, ano: int):
 
     pl_antes_resultado_periodo = valor_primeiro + aplicacoes_valor + resgates_valor
 
-
     dados = {
+        # Quantidades e cotas
         "qtd_cotas_inicio": round(float(primeiro.qtd_cotas), 6) if primeiro else 0,
         "qtd_cotas_fim": round(float(ultimo.qtd_cotas), 6) if ultimo else 0,
         "qtd_cotas_inicio_ant": round(float(primeiro_ant.qtd_cotas), 6) if primeiro_ant else 0,
@@ -47,12 +56,19 @@ def gerar_dados_dmpl(fundo_id: int, ano: int):
         "cota_fim": round(float(ultimo.cota), 6) if ultimo else 0,
         "cota_inicio_ant": round(float(primeiro_ant.cota), 6) if primeiro_ant else 0,
 
+        # Movimentações em quantidade
         "aplicacoes_qtd": round(float(aplicacoes_qtd), 6),
         "resgates_qtd": round(float(resgates_qtd), 6),
+        "aplicacoes_qtd_ant": round(float(aplicacoes_qtd_ant), 6),
+        "resgates_qtd_ant": round(float(resgates_qtd_ant), 6),
 
+        # Movimentações em valor (milhares)
         "aplicacoes_valor": int(soma_aplic / Decimal(1000)),
         "resgates_valor": int(soma_resg / Decimal(1000)),
+        "aplicacoes_valor_ant": int(soma_aplic_ant / Decimal(1000)),
+        "resgates_valor_ant": int(soma_resg_ant / Decimal(1000)),
 
+        # Valores consolidados
         "valor_ultimo": valor_ultimo,
         "valor_primeiro": valor_primeiro,
         "valor_primeiro_ant": valor_primeiro_ant,

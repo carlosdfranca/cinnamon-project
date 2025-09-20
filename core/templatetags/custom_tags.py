@@ -10,7 +10,10 @@ def get_item(dictionary, key):
 def formata_milhar(valor):
     try:
         if valor < 0:
-            return f"({abs(valor):,})".replace(",", ".")
-        return f"{valor:,}".replace(",", ".")
+            return f"({abs(valor):,})".replace(".", "X").replace(",", ".").replace("X", ",")
+        elif valor > 0:
+            return f"{valor:,}".replace(".", "X").replace(",", ".").replace("X", ",")
+        else:
+            return "0"
     except:
-        return "0"
+        return "-"
