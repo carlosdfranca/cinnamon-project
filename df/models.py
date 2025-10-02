@@ -39,16 +39,26 @@ class Fundo(models.Model):
 # =========================
 class GrupoGrande(models.Model):
     nome = models.CharField(max_length=255)
-
     ordem = models.IntegerField(null=True, blank=True, default=None)
+
+    TIPO_CHOICES = [
+        (1, "Ativo"),
+        (2, "Passivo"),
+        (3, "Patrimônio Líquido"),
+        (4, "Resultado"),
+    ]
+    tipo = models.IntegerField(choices=TIPO_CHOICES, null=True, blank=True)
 
     class Meta:
         verbose_name = "Grupão de Contas"
         verbose_name_plural = "Grupões de Contas"
         ordering = ["nome"]
+        constraints = [
+            models.UniqueConstraint(fields=["nome", "tipo"], name="uq_grupogrande_nome_tipo")
+        ]
 
     def __str__(self):
-        return f"{self.nome}"
+        return f"{self.nome} ({self.get_tipo_display()})"
 
 
 # =========================
@@ -62,19 +72,13 @@ class GrupoPequeno(models.Model):
         related_name="grupinhos"
     )
 
-    TIPO_CHOICES = [
-        (1, "Ativo"),
-        (2, "Passivo"),
-        (3, "Patrimônio Líquido"),
-        (4, "Resultado"),
-    ]
-
-    tipo = models.IntegerField(choices=TIPO_CHOICES)
-
     class Meta:
         verbose_name = "Grupinho de Contas"
         verbose_name_plural = "Grupinhos de Contas"
         ordering = ["grupao", "nome"]
+        constraints = [
+            models.UniqueConstraint(fields=["nome", "grupao"], name="uq_grupopequeno_nome_grupao")
+        ]
 
     def __str__(self):
         return f"{self.nome} (→ {self.grupao.nome})"
@@ -90,8 +94,7 @@ class MapeamentoContas(models.Model):
         on_delete=models.PROTECT,
         related_name="contas",
         null=True,
-        blank=True,
-        default=None
+        blank=True
     )
     descricao = models.CharField(max_length=255, null=True, blank=True)
 
@@ -99,9 +102,9 @@ class MapeamentoContas(models.Model):
         verbose_name = "Mapeamento de CC"
         verbose_name_plural = "Mapeamentos de CC"
         ordering = ["grupo_pequeno", "conta"]
-
+    
     def __str__(self):
-        return f"{self.conta} → {self.grupo_pequeno.nome} / {self.grupo_pequeno.grupao.nome}"
+        return f"{self.conta}"
 
 
 # =================================================
