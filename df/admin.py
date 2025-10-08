@@ -19,15 +19,15 @@ class FundoAdmin(admin.ModelAdmin):
 
 @admin.register(GrupoGrande)
 class GrupoGrandeAdmin(admin.ModelAdmin):
-    list_display = ("nome", )
+    list_display = ("nome", "tipo")
+    list_filter = ("tipo", )
     search_fields = ("nome",)
     ordering = ("nome", )
 
 
 @admin.register(GrupoPequeno)
 class GrupoPequenoAdmin(admin.ModelAdmin):
-    list_display = ("nome", "grupao", "tipo")
-    list_filter = ("grupao", "tipo")
+    list_display = ("nome", "grupao")
     search_fields = ("nome", "grupao__nome")
     ordering = ("grupao", "nome")
 

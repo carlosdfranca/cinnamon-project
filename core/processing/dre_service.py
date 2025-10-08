@@ -16,15 +16,18 @@ def gerar_dados_dre(
 ) -> Tuple[Dict, int, int]:
     """
     Monta a DRE a partir do mapeamento no banco.
-    Considera apenas grupinhos de tipo=4 (Resultado).
+    Considera apenas grupões de tipo=4 (Resultado).
     Ignora linhas zeradas em ambos os anos.
     """
 
-    # 1) Consulta agregada — só grupinhos tipo=4 (Resultado)
+    # 1) Consulta agregada — só grupões tipo=4 (Resultado)
     qs = (
         BalanceteItem.objects
-        .filter(fundo_id=fundo_id, ano__in=[ano, ano - 1],
-                conta_corrente__grupo_pequeno__tipo=4)
+        .filter(
+            fundo_id=fundo_id,
+            ano__in=[ano, ano - 1],
+            conta_corrente__grupo_pequeno__grupao__tipo=4,
+        )
         .values(
             "ano",
             "conta_corrente__grupo_pequeno_id",
@@ -45,24 +48,20 @@ def gerar_dados_dre(
     resultado_exercicio = 0
     resultado_exercicio_anterior = 0
 
-    # 3) Itera sobre os grupões e seus grupinhos de tipo=4
+    # 3) Itera apenas sobre grupões de tipo=4
     grupoes = (
         GrupoGrande.objects
+        .filter(tipo=4)
         .prefetch_related("grupinhos")
-        .all()
         .order_by("ordem", "nome")
     )
 
     for grupao in grupoes:
-        grupinhos_resultado = [g for g in grupao.grupinhos.all() if g.tipo == 4]
-        if not grupinhos_resultado:
-            continue
-
         bloco: Dict[str, Dict[str, int] | int] = {}
         soma_atual_i = 0
         soma_anterior_i = 0
 
-        for grupinho in sorted(grupinhos_resultado, key=lambda g: g.nome):
+        for grupinho in sorted(grupao.grupinhos.all(), key=lambda g: g.nome):
             atual = _int_mil(somas.get((grupao.id, grupinho.id, ano), 0.0))
             anterior = _int_mil(somas.get((grupao.id, grupinho.id, ano - 1), 0.0))
 
