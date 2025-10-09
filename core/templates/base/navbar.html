@@ -52,7 +52,7 @@
       <i class="bi bi-person-circle me-2"></i> {{ request.user.first_name|default:request.user.username }}
     </a>
     <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="perfilDropdown">
-      {% if user_is_global and empresas_disponiveis %}
+      {% if request.user.is_staff %}
       <li>
         <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'admin:index' %}">
           Painel Admin <i class="bi bi-database-fill-gear ms-2"></i>
