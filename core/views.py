@@ -293,8 +293,6 @@ def exportar_dfs_excel(request, fundo_id, ano):
     dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(fundo_id, ano)
     criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant)
 
-    print(dfc_tabela)
-
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     nome_curto = "_".join(str(fundo.nome).replace("-", "").split())
     response["Content-Disposition"] = f"attachment; filename=DFs_{ano}_{nome_curto}.xlsx"

@@ -85,6 +85,9 @@ def gerar_tabela_dfc(fundo_id: int, ano: int):
     reducao_pagar_atual = outros_pagar_atual - outros_pagar_ant
     reducao_pagar_ant = outros_pagar_ant - outros_pagar_atual
 
+    reducao_pagar_atual = reducao_pagar_atual - taxa_adm_atual - taxa_gestao_atual
+    reducao_pagar_ant = reducao_pagar_ant - taxa_adm_ant - taxa_gestao_ant
+
     caixa_operacional_atual = (
         resultado_ajustado_atual + aumento_dc_atual + aumento_receber_atual + reducao_pagar_atual
     )
