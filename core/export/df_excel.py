@@ -378,3 +378,129 @@ def criar_aba_dmpl(wb, fundo, ano, dados_dmpl, resultado_exercicio, resultado_ex
     # Ajuste largura
     for col_num, width in {1:65, 2:15, 3:15}.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
+
+
+# ================================================================
+# GUIA DFC
+# ================================================================
+def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
+    ws = wb.create_sheet(title="DFC")
+    ws.sheet_view.showGridLines = False
+
+    nome_fundo = str(fundo.nome).upper()
+
+    # Cabeçalho
+    ws["A1"] = nome_fundo; ws["A1"].font = bold; ws["A1"].alignment = left
+    ws["A2"] = f"CNPJ: {fundo.cnpj}"; ws["A2"].font = bold; ws["A2"].alignment = left
+    ws["A3"] = f"Administrado por {fundo.empresa.nome}"; ws["A3"].alignment = left
+    ws["A4"] = f"CNPJ: {fundo.empresa.cnpj or ''}"; ws["A4"].alignment = left
+    ws.append([])
+
+    ws["A6"] = "Demonstração dos Fluxos de Caixa – Método indireto"
+    ws["A6"].font = bold; ws["A6"].alignment = left
+    ws["A7"] = f"Exercícios findos em 31 de dezembro de {ano} e {ano - 1}"
+    ws["A7"].font = bold; ws["A7"].alignment = left
+    ws["A8"] = "(Valores expressos em milhares de reais)"
+    ws["A8"].font = italic; ws["A8"].alignment = left
+    ws.append([])
+
+    # Cabeçalho colunas
+    ws.append(["Descrição", f"31/12/{ano}", f"31/12/{ano-1}"])
+    row_header = ws.max_row
+    for col in (2, 3):
+        c = ws.cell(row=row_header, column=col)
+        c.alignment = right; c.font = bold; c.border = bottom_border
+
+    # Helpers
+    def _write_linha(descricao, atual=None, anterior=None, bold_=False, underline=None, indent=False):
+        ws.append([descricao, atual, anterior])
+        r = ws.max_row
+        ws.cell(row=r, column=1).alignment = indent2 if indent else left
+        if bold_:
+            ws.cell(row=r, column=1).font = Font(bold=True)
+        for c in (2, 3):
+            cell = ws.cell(row=r, column=c)
+            cell.alignment = right
+            cell.number_format = "#,##0_);(#,##0)"
+            if bold_:
+                cell.font = Font(bold=True)
+            if underline:
+                cell.border = underline
+
+    # === BLOCO 1: ATIVIDADES OPERACIONAIS ===
+    bloco_op = dfc_tabela.get("fluxo_operacionais", {})
+    _write_linha(bloco_op.get("titulo", ""), bold_=True)
+    ws.append([])
+
+    # Resultado líquido
+    resultado = bloco_op.get("resultado_liquido", {})
+    _write_linha(resultado.get("titulo", ""), resultado.get("ATUAL"), resultado.get("ANTERIOR"),
+                 bold_=True, underline=underline_double, indent=True)
+
+    # ---- Ajustes (subbloco interno)
+    ajustes = bloco_op.get("ajustes", {})
+    if ajustes:
+        ws.append([])
+        _write_linha(ajustes.get("titulo", ""), bold_=True, indent=True)
+        for chave, item in ajustes.items():
+            if not isinstance(item, dict) or chave == "titulo":
+                continue
+            _write_linha(item.get("titulo", ""), item.get("ATUAL"), item.get("ANTERIOR"), indent=True)
+        ws.append([])
+
+    # ---- Linhas subsequentes (variações)
+    for chave in ["aumento_dc", "aumento_receber", "reducao_pagar", "caixa_operacional"]:
+        item = bloco_op.get(chave, {})
+        if not item:
+            continue
+        bold_line = "caixa" in chave
+        underline_kind = underline_double if "caixa" in chave else None
+        _write_linha(item.get("titulo", ""), item.get("ATUAL"), item.get("ANTERIOR"), bold_=bold_line, underline=underline_kind, indent=True)
+
+    ws.append([])
+
+    # === BLOCO 2: FINANCIAMENTO ===
+    bloco_fin = dfc_tabela.get("fluxo_financiamento", {})
+    _write_linha(bloco_fin.get("titulo", ""), bold_=True)
+    for chave, item in bloco_fin.items():
+        if not isinstance(item, dict) or chave == "titulo":
+            continue
+        bold_line = "caixa" in chave
+        underline_kind = underline_double if "caixa" in chave else None
+        _write_linha(item.get("titulo", ""), item.get("ATUAL"), item.get("ANTERIOR"), bold_=bold_line, underline=underline_kind, indent=True)
+    ws.append([])
+
+    # === BLOCO 3: VARIAÇÃO E CAIXA FINAL ===
+    # Variação no caixa (agora com sublinhado duplo)
+    item_var = dfc_tabela.get("variacao_caixa", {})
+    if item_var:
+        _write_linha(item_var.get("titulo", ""), item_var.get("ATUAL"), item_var.get("ANTERIOR"),
+                     bold_=True, underline=underline_double)
+
+    # Linha em branco antes do início do caixa
+    ws.append([])
+
+    # Caixa início
+    item_ini = dfc_tabela.get("caixa_inicio", {})
+    if item_ini:
+        _write_linha(item_ini.get("titulo", ""), item_ini.get("ATUAL"), item_ini.get("ANTERIOR"), bold_=True)
+
+    # Caixa final
+    item_fim = dfc_tabela.get("caixa_final", {})
+    if item_fim:
+        _write_linha(item_fim.get("titulo", ""), item_fim.get("ATUAL"), item_fim.get("ANTERIOR"), bold_=True)
+
+    # Linha em branco antes das notas explicativas
+    ws.append([])
+
+    # Observação final
+    last_col = max(ws.max_column, 3)
+    ws.merge_cells(start_row=ws.max_row+1, start_column=1, end_row=ws.max_row+1, end_column=last_col)
+    cell = ws.cell(row=ws.max_row, column=1)
+    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
+    cell.font = Font(italic=True, bold=True)
+    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+    # Largura das colunas
+    for col_num, width in {1:70, 2:15, 3:15}.items():
+        ws.column_dimensions[get_column_letter(col_num)].width = width

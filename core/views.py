@@ -19,11 +19,12 @@ from usuarios.permissions import (
 from .forms import FundoForm
 
 # Camadas novas (seu core)
-from core.export.df_excel import criar_aba_dpf, criar_aba_dre, criar_aba_dmpl
+from core.export.df_excel import criar_aba_dpf, criar_aba_dre, criar_aba_dmpl, criar_aba_dfc
 from core.processing.import_service import import_balancete, import_mec
 from core.processing.dre_service import gerar_dados_dre
 from core.processing.dpf_service import gerar_dados_dpf
 from core.processing.dmpl_service import gerar_dados_dmpl
+from core.processing.dfc_service import gerar_tabela_dfc
 from core.upload.balancete_parser import parse_excel, BalanceteSchemaError
 from core.upload.mec_parser import parse_excel_mec, MecSchemaError
 
@@ -234,6 +235,9 @@ def df_resultado(request, fundo_id, ano):
     perc_total_pl_passivo_atual = _pct(total_pl_passivo_atual, pl_atual)
     perc_total_pl_passivo_anterior = _pct(total_pl_passivo_anterior, pl_anterior)
 
+    # --- DFC ---
+    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(fundo_id, int(ano))
+
     return render(request, "df_resultado.html", {
         # DRE
         "dre_tabela": dre_tabela,
@@ -251,6 +255,11 @@ def df_resultado(request, fundo_id, ano):
 
         # DMPL
         "dados_dmpl": dados_dmpl,
+
+        # --- DFC ---
+        "dfc_tabela": dfc_tabela,
+        "variacao_atual": variacao_atual,
+        "variacao_ant": variacao_ant,
 
         # contexto comum
         "ano": int(ano),
@@ -281,6 +290,8 @@ def exportar_dfs_excel(request, fundo_id, ano):
     criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_passivo_atual, total_pl_passivo_anterior)
     criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exercicio_anterior)
     criar_aba_dmpl(wb, fundo, ano, dados_dmpl, resultado_exercicio, resultado_exercicio_anterior, pl_atual, pl_anterior)
+    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(fundo_id, ano)
+    criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant)
 
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     nome_curto = "_".join(str(fundo.nome).replace("-", "").split())
