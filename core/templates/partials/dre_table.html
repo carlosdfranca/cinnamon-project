@@ -1,0 +1,35 @@
+{% load humanize custom_tags %}
+
+<table class="table table-bordered table-sm mt-3 align-middle text-end">
+  <thead class="table-light">
+    <tr>
+      <th class="text-start">Conta</th>
+      <th>{{ data_atual|date:"d/m/Y" }}</th>
+      <th>{{ data_anterior|date:"d/m/Y" }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for grupao, grupos in dre_tabela.items %}
+      <tr class="table-primary fw-bold">
+        <td class="text-start">{{ grupao }}</td>
+        <td colspan="2"></td>
+      </tr>
+
+      {% for nome, valores in grupos.items %}
+        {% if nome != "SOMA" and nome != "SOMA_ANTERIOR" %}
+          <tr>
+            <td class="text-start ps-4">{{ nome }}</td>
+            <td>{{ valores.ATUAL|intcomma }}</td>
+            <td>{{ valores.ANTERIOR|intcomma }}</td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+
+      <tr class="fw-semibold bg-light">
+        <td class="text-start ps-3">Subtotal {{ grupao }}</td>
+        <td>{{ grupos.SOMA|intcomma }}</td>
+        <td>{{ grupos.SOMA_ANTERIOR|intcomma }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

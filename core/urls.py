@@ -16,8 +16,8 @@ urlpatterns = [
     path('', demonstracao_financeira, name='demonstracao_financeira'),
     path("importar-balancete/", importar_balancete_view, name="importar_balancete"),
     path("importar-mec/", importar_mec_view, name="importar_mec"),
-    path('dre-resultado/<int:fundo_id>/<int:ano>/', df_resultado, name='dre_resultado'),
-    path('dre-exportar-xlsx/<int:fundo_id>/<int:ano>/', exportar_dfs_excel, name='exportar_dre_excel'),
+    path('dre-resultado/<int:fundo_id>/<str:data_atual>/<str:data_anterior>/', df_resultado, name='dre_resultado'),
+    path('dre-exportar-xlsx/<int:fundo_id>/<str:data_atual>/<str:data_anterior>/', exportar_dfs_excel, name='exportar_dre_excel'),
 
 
     # Fundos

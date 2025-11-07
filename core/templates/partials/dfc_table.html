@@ -1,0 +1,32 @@
+{% load humanize custom_tags %}
+
+<table class="table table-bordered table-sm mt-3 align-middle text-end">
+  <thead class="table-light">
+    <tr>
+      <th class="text-start">Descrição</th>
+      <th>{{ data_atual|date:"d/m/Y" }}</th>
+      <th>{{ data_anterior|date:"d/m/Y" }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sec, blocos in dfc_tabela.items %}
+      <!-- Título da seção -->
+      <tr class="table-primary fw-bold">
+        <td class="text-start">{{ blocos.titulo }}</td>
+        <td colspan="2"></td>
+      </tr>
+
+      {% for key, item in blocos.items %}
+        {% if key != "titulo" %}
+          {% if item.titulo %}
+            <tr>
+              <td class="text-start ps-4">{{ item.titulo }}</td>
+              <td>{{ item.ATUAL|intcomma }}</td>
+              <td>{{ item.ANTERIOR|intcomma }}</td>
+            </tr>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>

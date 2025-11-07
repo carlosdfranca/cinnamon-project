@@ -47,10 +47,10 @@ class MapeamentoContasAdmin(admin.ModelAdmin):
 
 @admin.register(BalanceteItem)
 class BalanceteItemAdmin(admin.ModelAdmin):
-    list_display = ("ano", "fundo", "get_conta", "saldo_final")
-    list_filter = ("ano", "fundo")
+    list_display = ("data_referencia", "fundo", "get_conta", "saldo_final")
+    list_filter = ("data_referencia", "fundo")
     search_fields = ("fundo__nome", "conta_corrente__conta")
-    ordering = ("-ano", "fundo")
+    ordering = ("-data_referencia", "fundo")
     autocomplete_fields = ("fundo", "conta_corrente")
     readonly_fields = ("data_importacao",)
 

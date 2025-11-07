@@ -5,14 +5,12 @@
 {% block title %}Demonstração Financeira{% endblock %}
 
 {% block conteudo %}
-<!-- Navbar -->
 {% include 'base/navbar.html' %}
 
 <div class="container mt-4">
   <div class="card shadow rounded p-4">
 
     <!-- Cabeçalho -->
-
     <div class="row mb-4">
       <div class="col-md-9">
         <div class="fw-bold" style="font-size: 1.05rem;">
@@ -28,491 +26,98 @@
           CNPJ: {{ fundo.empresa.cnpj }}
         </div>
       </div>
+
       <div class="col-md-3 text-end">
-        <a href="{% url 'exportar_dre_excel' fundo.id ano %}" class="btn btn-success">Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i></a>
+        <a href="{% url 'exportar_dre_excel' fundo.id data_atual|date:'Y-m-d' data_anterior|date:'Y-m-d' %}" class="btn btn-success">
+          Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i>
+        </a>
       </div>
     </div>
 
+    <!-- Período -->
+    <div class="mb-3">
+      <span class="fw-bold">Período analisado:</span>
+      <span class="text-primary">
+        {{ data_anterior|date:"d/m/Y" }} → {{ data_atual|date:"d/m/Y" }}
+      </span>
+    </div>
+
+    <!-- Abas -->
     <ul class="nav nav-tabs d-flex" id="myTabjustified" role="tablist">
       <li class="nav-item flex-fill" role="presentation">
-        <button class="nav-link w-100 active" id="dpf-tab" data-bs-toggle="tab" data-bs-target="#dpf-justified" type="button" role="tab" aria-controls="dpf" aria-selected="true">DPF</button>
+        <button class="nav-link w-100 active" id="dpf-tab" data-bs-toggle="tab" data-bs-target="#dpf-justified"
+                type="button" role="tab" aria-controls="dpf" aria-selected="true">DPF</button>
       </li>
       <li class="nav-item flex-fill" role="presentation">
-        <button class="nav-link w-100" id="dre-tab" data-bs-toggle="tab" data-bs-target="#dre-justified" type="button" role="tab" aria-controls="dre" aria-selected="false">DRE</button>
+        <button class="nav-link w-100" id="dre-tab" data-bs-toggle="tab" data-bs-target="#dre-justified"
+                type="button" role="tab" aria-controls="dre" aria-selected="false">DRE</button>
       </li>
       <li class="nav-item flex-fill" role="presentation">
-        <button class="nav-link w-100" id="dmpl-tab" data-bs-toggle="tab" data-bs-target="#dmpl-justified" type="button" role="tab" aria-controls="dmpl" aria-selected="false">DMPL</button>
+        <button class="nav-link w-100" id="dmpl-tab" data-bs-toggle="tab" data-bs-target="#dmpl-justified"
+                type="button" role="tab" aria-controls="dmpl" aria-selected="false">DMPL</button>
       </li>
       <li class="nav-item flex-fill" role="presentation">
-        <button class="nav-link w-100" id="dfc-tab" data-bs-toggle="tab" data-bs-target="#dfc-justified" type="button" role="tab" aria-controls="dfc" aria-selected="false">DFC</button>
+        <button class="nav-link w-100" id="dfc-tab" data-bs-toggle="tab" data-bs-target="#dfc-justified"
+                type="button" role="tab" aria-controls="dfc" aria-selected="false">DFC</button>
       </li>
     </ul>
+
+    <!-- Conteúdo das abas -->
     <div class="tab-content pt-2" id="myTabjustifiedContent">
+
       <!-- DPF -->
       <div class="tab-pane fade show active" id="dpf-justified" role="tabpanel" aria-labelledby="dpf-tab">
-        <div class="fw-bold mt-3">
-          Demonstração da Posição Financeira
-        </div>
+        <div class="fw-bold mt-3">Demonstração da Posição Financeira</div>
         <div class="fw-bold">
-          Em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+          Em {{ data_atual|date:"d/m/Y" }} e {{ data_anterior|date:"d/m/Y" }}
         </div>
         <div class="fst-italic" style="font-size: 0.85rem;">
-          (Valores expressos em milhares de reais, exceto quando apresentado de outra forma)											
+          (Valores expressos em milhares de reais, exceto quando indicado de outra forma)
         </div>
-        
-        <!-- Tabela com os dados do DPF-->         
-        <table class="table table-bordered table-sm mt-2">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 60%">Descrição</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
-              <th style="width: 10%" class="text-end">% PL {{ ano }}</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
-              <th style="width: 10%" class="text-end">% PL {{ ano|add:"-1" }}</th>
-            </tr>
-          </thead>
-          <tbody>
 
-            {# ====== ATIVO ====== #}
-            {% with secao=dpf_tabela.ATIVO %}
-              {% for grupo_label, bloco in secao.items %}
-                {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
-                  <tr class="table-secondary fw-bold">
-                    <td colspan="1">{{ grupo_label }}</td>
-                    <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-                  </tr>
-
-                  {% for subgrupo, valores in bloco.items %}
-                    {% if subgrupo not in 'SOMA,SOMA_ANTERIOR,PERC_ATUAL,PERC_ANTERIOR' %}
-                      <tr>
-                        <td>{{ subgrupo }}</td>
-                        <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-                      </tr>
-                    {% endif %}
-                  {% endfor %}
-
-                  <tr class="border-top">
-                    <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-                  </tr>
-                {% endif %}
-              {% endfor %}
-
-              <!-- TOTAL ATIVO -->
-              <tr class="table-secondary fw-bold">
-                <td>TOTAL ATIVO</td>
-                <td class="text-end">{{ secao.TOTAL_ATIVO.ATUAL|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_ATIVO.ANTERIOR|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-              </tr>
-            {% endwith %}
-
-            <!-- Separador entre seções -->
-            <tr class="border-top">
-              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            {# ====== PASSIVO ====== #}
-            {% with secao=dpf_tabela.PASSIVO %}
-              {% for grupo_label, bloco in secao.items %}
-                {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
-                  <tr class="table-secondary fw-bold">
-                    <td colspan="1">{{ grupo_label }}</td>
-                    <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
-                    <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-                  </tr>
-
-                  {% for subgrupo, valores in bloco.items %}
-                    {% if subgrupo not in 'SOMA,SOMA_ANTERIOR,PERC_ATUAL,PERC_ANTERIOR' %}
-                      <tr>
-                        <td>{{ subgrupo }}</td>
-                        <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
-                        <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-                      </tr>
-                    {% endif %}
-                  {% endfor %}
-
-                  <tr class="border-top">
-                    <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-                  </tr>
-                {% endif %}
-              {% endfor %}
-
-              <!-- TOTAL PASSIVO -->
-              <tr class="table-secondary fw-bold">
-                <td>TOTAL PASSIVO</td>
-                <td class="text-end">{{ secao.TOTAL_PASSIVO.ATUAL|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_PASSIVO.ANTERIOR|default:0|formata_milhar }}</td>
-                <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
-              </tr>
-            {% endwith %}
-
-            <!-- Separador entre seções -->
-            <tr class="border-top">
-              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <!-- PL -->
-            <tr class="table-secondary fw-bold">
-              <td>Patrimônio líquido</td>
-              <td class="text-end">{{ pl_ajustado_atual|formata_milhar }}</td>
-              <td class="text-end">-</td>
-              <td class="text-end">{{ pl_ajustado_anterior|formata_milhar }}</td>
-              <td class="text-end">-</td>
-            </tr>
-
-            <!-- Separador entre seções -->
-            <tr class="border-top">
-              <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <!-- PL + PASSIVO -->
-            <tr class="table-secondary fw-bold">
-              <td>Total do patrimônio líquido e do passivo</td>
-              <td class="text-end">{{ total_pl_passivo_atual|formata_milhar }}</td>
-              <td class="text-end">{{ perc_total_pl_passivo_atual|formata_milhar }}</td>
-              <td class="text-end">{{ total_pl_passivo_anterior|formata_milhar }}</td>
-              <td class="text-end">{{ perc_total_pl_passivo_anterior|formata_milhar }}</td>
-            </tr>
-
-          </tbody>
-        </table>
+        {% include 'partials/dpf_table.html' %}
       </div>
 
       <!-- DRE -->
       <div class="tab-pane fade" id="dre-justified" role="tabpanel" aria-labelledby="dre-tab">
-        <div class="fw-bold mt-3">
-          Demonstração do Resultado do Exercício
-        </div>
+        <div class="fw-bold mt-3">Demonstração do Resultado do Exercício</div>
         <div class="fw-bold">
-          Exercícios findos em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+          Períodos findos em {{ data_atual|date:"d/m/Y" }} e {{ data_anterior|date:"d/m/Y" }}
         </div>
         <div class="fst-italic" style="font-size: 0.85rem;">
           (Valores expressos em milhares de reais)
         </div>
 
-        <!-- Tabela com os dados do DRE-->
-        <table class="table table-bordered table-sm mt-2">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 80%">Descrição</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for grupo, valores in dre_tabela.items %}
-              <tr class="table-secondary fw-bold">
-                <td colspan="1">{{ grupo }}</td>
-                <td class="text-end">{{ valores.SOMA|formata_milhar }}</td>
-                <td class="text-end">{{ valores.SOMA_ANTERIOR|formata_milhar }}</td>
-              </tr>
-              {% for subgrupo, val in valores.items %}
-                {% if subgrupo != 'SOMA' and subgrupo != 'SOMA_ANTERIOR' %}
-                  <tr>
-                    <td>{{ subgrupo }}</td>
-                    <td class="text-end">{{ val.ATUAL|formata_milhar }}</td>
-                    <td class="text-end">{{ val.ANTERIOR|formata_milhar }}</td>
-                  </tr>
-                {% endif %}
-              {% endfor %}
-
-              <tr class="border-top">
-                <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-              </tr>
-
-            {% endfor %}
-
-            <!-- Resultado do exercício -->
-            <tr class="table-secondary fw-bold">
-              <td>Resultado do exercício</td>
-              <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
-              <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
-            </tr>
-          </tbody>
-        </table>
+        {% include 'partials/dre_table.html' %}
       </div>
 
       <!-- DMPL -->
       <div class="tab-pane fade" id="dmpl-justified" role="tabpanel" aria-labelledby="dmpl-tab">
-        <div class="fw-bold mt-3">
-          Demonstração das Mutações do Patrimônio Líquido 
-        </div>
+        <div class="fw-bold mt-3">Demonstração das Mutações do Patrimônio Líquido</div>
         <div class="fw-bold">
-          Exercícios findos em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+          Períodos findos em {{ data_atual|date:"d/m/Y" }} e {{ data_anterior|date:"d/m/Y" }}
         </div>
         <div class="fst-italic" style="font-size: 0.85rem;">
-           (Valores expressos em milhares de reais, exceto o valor unitário do valor da cota)
+          (Valores expressos em milhares de reais, exceto valor unitário das cotas)
         </div>
 
-        <table class="table table-bordered table-sm mt-2">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 80%">Descrição</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano }}</th>
-              <th style="width: 10%" class="text-end">31/12/{{ ano|add:"-1" }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="table-secondary fw-bold">
-              <td colspan="1">Patrimônio líquido no início do período</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
-            </tr>
-            <tr>
-              <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio|formata_milhar }}</strong></td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
-              <td class="text-end">-</td>
-            </tr>
-            <tr>
-              <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio_ant|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio_ant|formata_milhar }}</strong></td>
-              <td class="text-end">-</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
-            </tr>
-            <!-- PULA LINHA -->
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr class="table-secondary fw-bold">
-              <td colspan="3">Emissão de cotas</td>
-            </tr>
-            <tr>
-              <td> Total de <strong>{{ dados_dmpl.aplicacoes_qtd|formata_milhar }}</strong> cotas subordinadas</td>
-              <td class="text-end">{{ dados_dmpl.aplicacoes_valor|formata_milhar }}</td>
-              <td class="text-end">{{ dados_dmpl.aplicacoes_valor_ant|formata_milhar }}</td>
-            </tr>
-            <!-- PULA LINHA -->
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr class="table-secondary fw-bold">
-              <td colspan="3">Resgate de cotas</td>
-            </tr>
-            <tr>
-              <td> Total de <strong>{{ dados_dmpl.resgates_qtd|formata_milhar }}</strong> cotas subordinadas</td>
-              <td class="text-end">{{ dados_dmpl.resgates_valor|formata_milhar }}</td>
-              <td class="text-end">{{ dados_dmpl.resgates_valor_ant|formata_milhar }}</td>
-            </tr>
-            <!-- PULA LINHA -->
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr class="table-secondary fw-bold">
-              <td colspan="1">Patrimônio líquido antes do resultado do período</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
-            </tr>
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr class="table-secondary fw-bold">
-              <td colspan="1">Resultado do período</td>
-              <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
-              <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
-            </tr>
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-            
-            <tr class="table-secondary fw-bold">
-              <td colspan="1">Patrimônio líquido no final do exercício/período</td>
-              <td class="text-end">{{ pl_ajustado_atual|formata_milhar }}</td>
-              <td class="text-end">{{ pl_ajustado_anterior|formata_milhar }}</td>
-            </tr>
-            <tr>
-              <td>Total de <strong>{{ dados_dmpl.qtd_cotas_fim|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_fim|formata_milhar }}</strong></td>
-              <td class="text-end">{{ dados_dmpl.valor_ultimo|formata_milhar }}</td>
-              <td class="text-end">-</td>
-            </tr>
-            <tr>
-              <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio|formata_milhar }}</strong></td>
-              <td class="text-end">-</td>
-              <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
-            </tr>
-          </tbody>
-        </table>
+        {% include 'partials/dmpl_table.html' %}
       </div>
 
       <!-- DFC -->
       <div class="tab-pane fade" id="dfc-justified" role="tabpanel" aria-labelledby="dfc-tab">
-        <div class="fw-bold mt-3">
-          Demonstração dos Fluxos de Caixa – Método indireto 
-        </div>
+        <div class="fw-bold mt-3">Demonstração dos Fluxos de Caixa – Método Indireto</div>
         <div class="fw-bold">
-          Exercícios findos em 31 de dezembro de {{ ano }} e {{ ano|add:"-1" }}
+          Períodos findos em {{ data_atual|date:"d/m/Y" }} e {{ data_anterior|date:"d/m/Y" }}
         </div>
         <div class="fst-italic" style="font-size: 0.85rem;">
           (Valores expressos em milhares de reais)
         </div>
 
-        <!-- Tabela com os dados do DFC-->
-        <table class="table table-bordered table-sm mt-3">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 70%">Descrição</th>
-              <th class="text-end">31/12/{{ ano }}</th>
-              <th class="text-end">31/12/{{ ano|add:"-1" }}</th>
-            </tr>
-          </thead>
-          <tbody>
-
-            <!-- FLUXO OPERACIONAIS -->
-            <tr class="table-secondary fw-bold">
-              <td colspan="3">{{ dfc_tabela.fluxo_operacionais.titulo }}</td>
-            </tr>
-
-            <tr>
-              <td class="ps-3">{{ dfc_tabela.fluxo_operacionais.resultado_liquido.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.resultado_liquido.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.resultado_liquido.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr class="table-secondary fw-bold">
-              <td colspan="3">{{ dfc_tabela.fluxo_operacionais.ajustes.titulo }}</td>
-            </tr>
-
-            <tr>
-              <td class="ps-4">{{ dfc_tabela.fluxo_operacionais.ajustes.rendimento_dc.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.rendimento_dc.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.rendimento_dc.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td class="ps-4">{{ dfc_tabela.fluxo_operacionais.ajustes.provisao_perdas.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.provisao_perdas.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.provisao_perdas.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td class="ps-4">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_adm.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_adm.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_adm.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td class="ps-4">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_gestao.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_gestao.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.taxa_gestao.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="fw-bold">
-              <td>{{ dfc_tabela.fluxo_operacionais.ajustes.resultado_ajustado.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.resultado_ajustado.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.ajustes.resultado_ajustado.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr>
-              <td>{{ dfc_tabela.fluxo_operacionais.aumento_dc.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.aumento_dc.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.aumento_dc.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td>{{ dfc_tabela.fluxo_operacionais.aumento_receber.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.aumento_receber.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.aumento_receber.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td>{{ dfc_tabela.fluxo_operacionais.reducao_pagar.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.reducao_pagar.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.reducao_pagar.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="fw-bold">
-              <td>{{ dfc_tabela.fluxo_operacionais.caixa_operacional.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.caixa_operacional.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_operacionais.caixa_operacional.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <!-- FINANCIAMENTO -->
-            <tr class="table-secondary fw-bold">
-              <td colspan="3">{{ dfc_tabela.fluxo_financiamento.titulo }}</td>
-            </tr>
-
-            <tr><td>{{ dfc_tabela.fluxo_financiamento.emissao.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.emissao.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.emissao.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr><td>{{ dfc_tabela.fluxo_financiamento.resgate.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.resgate.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.resgate.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr><td>{{ dfc_tabela.fluxo_financiamento.variacoes_resgates.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.variacoes_resgates.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.variacoes_resgates.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="fw-bold">
-              <td>{{ dfc_tabela.fluxo_financiamento.caixa_financiamento.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.caixa_financiamento.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.fluxo_financiamento.caixa_financiamento.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <!-- VARIAÇÃO FINAL -->
-            <tr class="fw-bold">
-              <td>{{ dfc_tabela.variacao_caixa.titulo }}</td>
-              <td class="text-end border-top">{{ dfc_tabela.variacao_caixa.ATUAL|formata_milhar }}</td>
-              <td class="text-end border-top">{{ dfc_tabela.variacao_caixa.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr class="border-top">
-              <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
-            </tr>
-
-            <tr>
-              <td>{{ dfc_tabela.caixa_inicio.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.caixa_inicio.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.caixa_inicio.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-            <tr>
-              <td>{{ dfc_tabela.caixa_final.titulo }}</td>
-              <td class="text-end">{{ dfc_tabela.caixa_final.ATUAL|formata_milhar }}</td>
-              <td class="text-end">{{ dfc_tabela.caixa_final.ANTERIOR|formata_milhar }}</td>
-            </tr>
-
-          </tbody>
-        </table>
-
-
-
-
+        {% include 'partials/dfc_table.html' %}
       </div>
-    </div>
-  </div>
-</div>
+
+    </div> <!-- tab-content -->
+  </div> <!-- card -->
+</div> <!-- container -->
 {% endblock %}

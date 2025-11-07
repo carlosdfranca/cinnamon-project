@@ -1,7 +1,9 @@
+from datetime import date
+import re
+
 from core.processing.dre_service import gerar_dados_dre
 from core.processing.dpf_service import gerar_dados_dpf
 from core.processing.dmpl_service import gerar_dados_dmpl
-import re
 
 
 def slugify_key(key: str) -> str:
@@ -15,17 +17,23 @@ def slugify_key(key: str) -> str:
     return key.strip("_")
 
 
-def gerar_tabela_dfc(fundo_id: int, ano: int):
+def gerar_tabela_dfc(fundo_id: int, data_atual: date, data_anterior: date):
     """
-    Retorna um dicionário hierárquico (dict_tabela) simplificado
-    com chaves slugificadas (compatíveis com template engine).
+    Retorna um dicionário hierárquico (dict_tabela) no mesmo formato do DFC original,
+    porém comparando duas datas específicas de balancete.
+    Qualquer dado referente ao 'ano anterior do anterior' será zerado.
     """
 
-    dre_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, ano)
-    dpf_tabela, _ = gerar_dados_dpf(fundo_id, ano)
-    dados_dmpl = gerar_dados_dmpl(fundo_id, ano)
+    # === Importa dados dos demais relatórios ===
+    dre_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(fundo_id, data_atual, data_anterior)
+    dpf_tabela, _ = gerar_dados_dpf(fundo_id, data_atual, data_anterior)
+    dados_dmpl = gerar_dados_dmpl(fundo_id, data_atual, data_anterior)
 
-    def _int(v): return int(round(v or 0, 0))
+    def _int(v): 
+        try:
+            return int(round(v or 0, 0))
+        except Exception:
+            return 0
 
     # === Helpers ===
     def pegar_valor_dre(nome):
@@ -80,13 +88,12 @@ def gerar_tabela_dfc(fundo_id: int, ano: int):
 
     aumento_dc_atual = (dc_ant - dc_atual) - (rendimento_atual + provisao_atual)
     aumento_dc_ant = (dc_ant - dc_atual) - (rendimento_ant + provisao_ant)
+
     aumento_receber_atual = outros_receber_ant - outros_receber_atual
     aumento_receber_ant = outros_receber_ant - outros_receber_atual
-    reducao_pagar_atual = outros_pagar_atual - outros_pagar_ant
-    reducao_pagar_ant = outros_pagar_ant - outros_pagar_atual
 
-    reducao_pagar_atual = reducao_pagar_atual - taxa_adm_atual - taxa_gestao_atual
-    reducao_pagar_ant = reducao_pagar_ant - taxa_adm_ant - taxa_gestao_ant
+    reducao_pagar_atual = (outros_pagar_atual - outros_pagar_ant) - taxa_adm_atual - taxa_gestao_atual
+    reducao_pagar_ant = (outros_pagar_ant - outros_pagar_atual) - taxa_adm_ant - taxa_gestao_ant
 
     caixa_operacional_atual = (
         resultado_ajustado_atual + aumento_dc_atual + aumento_receber_atual + reducao_pagar_atual
@@ -101,6 +108,7 @@ def gerar_tabela_dfc(fundo_id: int, ano: int):
     emissao_ant = dados_dmpl.get("aplicacoes_valor_ant", 0)
     resgate_ant = -abs(dados_dmpl.get("resgates_valor_ant", 0))
 
+    # Mantendo "ano anterior do anterior" zerado
     variacao_resgates_atual = 0
     variacao_resgates_ant = 0
 
@@ -120,10 +128,11 @@ def gerar_tabela_dfc(fundo_id: int, ano: int):
     caixa_final_atual = (disp_atual or 0) + (apl_atual or 0)
     caixa_inicial_atual = (disp_ant or 0) + (apl_ant or 0)
 
-    caixa_final_ant = caixa_inicial_atual  # fim do ano anterior
+    # Não temos o período anterior do anterior → zeramos
+    caixa_final_ant = caixa_inicial_atual
     caixa_inicial_ant = 0
 
-    # === DICIONÁRIO FINAL COM CHAVES SEGURAS ===
+    # === DICIONÁRIO FINAL ===
     dict_tabela = {
         "fluxo_operacionais": {
             "titulo": "Fluxo de caixa das atividades operacionais",

@@ -4,7 +4,6 @@
 {% block title %}Demonstração Financeira{% endblock %}
 
 {% block conteudo %}
-<!-- Navbar -->
 {% include 'base/navbar.html' %}
 
 <div class="container mt-5">
@@ -30,7 +29,7 @@
       </select>
 
       <div id="df-container" class="mt-4" style="display: none;">
-        <!-- Conteúdo será exibido via JS depois de selecionar o fundo -->
+        <!-- Conteúdo será carregado via JS -->
       </div>
     </div>
   {% else %}
@@ -49,126 +48,117 @@
   document.addEventListener("DOMContentLoaded", function () {
     const selectFundo = document.getElementById("select-fundo");
     const container = document.getElementById("df-container");
-
-    // Anos disponíveis por fundo (injeção do Django)
-    const anosPorFundo = {{ fundos_anos|safe }};
+    const datasPorFundo = {{ fundos_datas|safe }};
 
     function renderConteudo(fundoId) {
-      let htmlAnos = "";
-      if (anosPorFundo[fundoId] && anosPorFundo[fundoId].length > 0) {
-        htmlAnos += `
-          <hr>
-          <div class="mb-3 text-center">
-            <h6 class="text-muted mb-2">Anos com dados:</h6>
-            <div class="d-flex flex-wrap justify-content-center gap-2">
-        `;
-        anosPorFundo[fundoId].forEach(ano => {
-          htmlAnos += `
-            <a href="/dre-resultado/${fundoId}/${ano}/" class="btn btn-outline-primary" aria-label="Abrir DRE do ano ${ano}">
-              ${ano}
-            </a>`;
-        });
-        htmlAnos += `</div></div>`;
-      } else {
-        htmlAnos = `<div class="alert alert-info text-center" role="status">Os dados para esse fundo ainda não foram enviados.</div>`;
+      const datas = datasPorFundo[fundoId] || [];
+      if (!datas.length) {
+        container.innerHTML = `<div class="alert alert-info text-center">Nenhum balancete foi importado para esse fundo.</div>`;
+        return;
       }
 
+      let options = datas.map(d => `<option value="${d}">${new Date(d).toLocaleDateString('pt-BR')}</option>`).join("");
 
-      // Formulário único para enviar Balancete + MEC juntos
-      // Nomes dos campos devem bater com a view: arquivo_balancete, arquivo_mec, ano, fundo_id
       container.innerHTML = `
-        ${htmlAnos}
+        <hr>
+        <div class="row text-center mb-4">
+          <h5 class="fw-bold">Selecionar Período de Análise</h5>
+          <p class="text-muted small">Escolha as duas datas de balancete que deseja comparar.</p>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Saldo Atual</label>
+            <select id="dataAtual" class="form-select" required>
+              <option value="" disabled selected>Selecione a data mais recente</option>
+              ${options}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Saldo Anterior</label>
+            <select id="dataAnterior" class="form-select" required>
+              <option value="" disabled selected>Selecione a data de comparação</option>
+              ${options}
+            </select>
+          </div>
+        </div>
+
+        <div class="text-center mb-4">
+          <button id="btnGerarDF" class="btn btn-primary" disabled>
+            <i class="bi bi-graph-up"></i> Gerar Demonstrações Financeiras
+          </button>
+        </div>
+
         <hr>
         {% if can_enviar_balancete %}
-          <div class="row mt-4">
-            <!-- Coluna Balancete -->
-            <div class="col-md-6 d-flex flex-column align-items-center border-end">
-              <h4 class="mb-3 text-center">Enviar Balancete</h4>
-              <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data" class="w-100 px-3">
-                {% csrf_token %}
-                <input type="hidden" name="fundo_id" value="${fundoId}">
-                
-                <div class="row mb-3">
-                  <div class="col-md-4 text-center">
-                    <label for="ano-df" class="form-label">Ano</label>
-                    <input type="number" class="form-control text-center" id="ano-df" name="ano" required min="1900" max="2100" placeholder="AAAA">
-                  </div>
-
-                  <div class="col-md-8 text-center">
-                    <label for="arquivo-balancete" class="form-label">Planilha Balancete</label>
-                    <input type="file" class="form-control" id="arquivo-balancete" name="arquivo_balancete" accept=".xlsx,.xls,.csv" required>
-                  </div>
+        <div class="row mt-4">
+          <!-- Coluna Balancete -->
+          <div class="col-md-6 d-flex flex-column align-items-center border-end">
+            <h4 class="mb-3 text-center">Enviar Balancete</h4>
+            <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data" class="w-100 px-3">
+              {% csrf_token %}
+              <input type="hidden" name="fundo_id" value="${fundoId}">
+              <div class="row mb-3">
+                <div class="col-md-5 text-center">
+                  <label class="form-label">Data de Referência</label>
+                  <input type="date" class="form-control text-center" name="data_referencia" required>
                 </div>
-
-                <div class="d-flex justify-content-center">
-                  <button type="submit" class="btn btn-primary">Enviar Balancete</button>
+                <div class="col-md-7 text-center">
+                  <label class="form-label">Planilha Balancete</label>
+                  <input type="file" class="form-control" name="arquivo_balancete" accept=".xlsx,.xls" required>
                 </div>
-              </form>
-            </div>
-
-            <!-- Coluna MEC -->
-            <div class="col-md-6 d-flex flex-column align-items-center">
-              <h4 class="mb-3 text-center">Enviar MEC</h4>
-              <form method="POST" action="{% url 'importar_mec' %}" enctype="multipart/form-data" class="w-100 px-3">
-                {% csrf_token %}
-                <input type="hidden" name="fundo_id" value="${fundoId}">
-                
-                <div class="mb-3 text-center">
-                  <label for="arquivo-mec" class="form-label">Planilha MEC</label>
-                  <input type="file" class="form-control" id="arquivo-mec" name="arquivo_mec" accept=".xlsx,.xls,.csv" required>
-                </div>
-
-                <div class="d-flex justify-content-center">
-                  <button type="submit" class="btn btn-primary">Enviar MEC</button>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div class="d-flex justify-content-center">
+                <button type="submit" class="btn btn-primary">Enviar Balancete</button>
+              </div>
+            </form>
           </div>
-        {% else %}
-          <div class="alert alert-secondary d-flex align-items-center" role="alert">
-            <i class="bi bi-eye me-2" aria-hidden="true"></i>
-            Você não tem permissão para enviar arquivos neste contexto. (Visualização apenas)
+
+          <!-- Coluna MEC -->
+          <div class="col-md-6 d-flex flex-column align-items-center">
+            <h4 class="mb-3 text-center">Enviar MEC</h4>
+            <form method="POST" action="{% url 'importar_mec' %}" enctype="multipart/form-data" class="w-100 px-3">
+              {% csrf_token %}
+              <input type="hidden" name="fundo_id" value="${fundoId}">
+              <div class="mb-3 text-center">
+                <label class="form-label">Planilha MEC</label>
+                <input type="file" class="form-control" name="arquivo_mec" accept=".xlsx,.xls" required>
+              </div>
+              <div class="d-flex justify-content-center">
+                <button type="submit" class="btn btn-primary">Enviar MEC</button>
+              </div>
+            </form>
           </div>
+        </div>
         {% endif %}
       `;
 
-      // Validação client-side: só habilita o envio quando ano + 2 arquivos estiverem preenchidos
-      const anoInput = document.getElementById("ano-df");
-      const balInput = document.getElementById("arquivo-balancete");
-      const mecInput = document.getElementById("arquivo-mec");
-      const btnEnviar = document.getElementById("btn-enviar");
-      const btnLimpar = document.getElementById("btn-limpar");
-      const form = document.getElementById("form-upload-df");
+      // Lógica de ativação do botão “Gerar DF”
+      const dataAtual = document.getElementById("dataAtual");
+      const dataAnterior = document.getElementById("dataAnterior");
+      const btnGerar = document.getElementById("btnGerarDF");
 
-      function validar() {
-        const anoOk = !!anoInput?.value;
-        const balOk = !!balInput?.files?.length;
-        const mecOk = !!mecInput?.files?.length;
-        btnEnviar.disabled = !(anoOk && balOk && mecOk);
+      function validarSelecao() {
+        btnGerar.disabled = !(dataAtual.value && dataAnterior.value && dataAtual.value !== dataAnterior.value);
       }
 
-      ["change", "input"].forEach(evt => {
-        anoInput?.addEventListener(evt, validar);
-        balInput?.addEventListener(evt, validar);
-        mecInput?.addEventListener(evt, validar);
-      });
-      validar();
+      dataAtual.addEventListener("change", validarSelecao);
+      dataAnterior.addEventListener("change", validarSelecao);
 
-      // Botão limpar: reseta o form e revalida
-      btnLimpar?.addEventListener("click", function(){
-        form?.reset();
-        validar();
+      btnGerar.addEventListener("click", function () {
+        const atual = dataAtual.value;
+        const anterior = dataAnterior.value;
+        const url = `/dre-resultado/${fundoId}/${atual}/${anterior}/`;
+        window.location.href = url;
       });
     }
 
-    // Evento de seleção do fundo
-    if (selectFundo) {
-      selectFundo.addEventListener("change", function () {
-        const fundoId = this.value;
-        container.style.display = "block";
-        renderConteudo(fundoId);
-      });
-    }
+    // Selecionar fundo
+    selectFundo.addEventListener("change", function () {
+      const fundoId = this.value;
+      container.style.display = "block";
+      renderConteudo(fundoId);
+    });
   });
 </script>
 {% endblock %}

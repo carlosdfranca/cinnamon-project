@@ -1,0 +1,52 @@
+{% load humanize custom_tags %}
+
+<table class="table table-bordered table-sm mt-3 align-middle text-end">
+  <thead class="table-light">
+    <tr>
+      <th class="text-start">Conta</th>
+      <th>{{ data_atual|date:"d/m/Y" }}</th>
+      <th>{{ data_anterior|date:"d/m/Y" }}</th>
+      <th>Var. %</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sec, grupos in dpf_tabela.items %}
+      <tr class="table-primary fw-bold">
+        <td class="text-start">{{ sec }}</td>
+        <td colspan="3"></td>
+      </tr>
+
+      {% for grupo, contas in grupos.items %}
+        <tr class="fw-semibold bg-light">
+          <td class="text-start ps-4">{{ grupo }}</td>
+          <td>{{ contas.SOMA|intcomma }}</td>
+          <td>{{ contas.SOMA_ANTERIOR|intcomma }}</td>
+          <td>
+            {% if contas.SOMA_ANTERIOR %}
+              {{ contas.SOMA|percentual:contas.SOMA_ANTERIOR }}%
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+
+        {% for conta, valores in contas.items %}
+          {% if conta != "SOMA" and conta != "SOMA_ANTERIOR" %}
+            <tr>
+              <td class="text-start ps-5">{{ conta }}</td>
+              <td>{{ valores.ATUAL|intcomma }}</td>
+              <td>{{ valores.ANTERIOR|intcomma }}</td>
+              <td>
+                {% if valores.ANTERIOR %}
+                  {{ valores.ATUAL|percentual:valores.ANTERIOR }}%
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
