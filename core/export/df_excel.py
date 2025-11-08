@@ -15,6 +15,50 @@ double_bottom_border = Border(bottom=Side(style="double"))
 
 
 # ================================================================
+# Função auxiliar para rodapé padronizado
+# ================================================================
+def adicionar_rodape(ws, ultima_coluna=3, mensagem=None):
+    """
+    Insere o rodapé padrão em uma planilha, garantindo exatamente
+    UMA linha em branco entre os dados e o rodapé.
+
+    - Se a última linha já for vazia, reaproveitamos como "espaço".
+    - Se não for, criamos uma linha vazia antes do rodapé.
+    """
+    from openpyxl.styles import Font, Alignment
+
+    if not mensagem:
+        mensagem = "As notas explicativas são parte integrante das demonstrações financeiras."
+
+    # Verifica se a última linha já está em branco
+    last_row = ws.max_row
+    is_blank = True
+    for col in range(1, ws.max_column + 1):
+        if ws.cell(row=last_row, column=col).value not in (None, ""):
+            is_blank = False
+            break
+
+    # Se a última linha tiver conteúdo, adicionamos UMA linha em branco
+    if not is_blank:
+        ws.append([]); last_row = ws.max_row + 1
+
+    # Rodapé será sempre na linha seguinte
+    footer_row = last_row + 1
+    last_col = max(ws.max_column, ultima_coluna)
+
+    ws.merge_cells(
+        start_row=footer_row,
+        start_column=1,
+        end_row=footer_row,
+        end_column=last_col
+    )
+    cell = ws.cell(row=footer_row, column=1)
+    cell.value = mensagem
+    cell.font = Font(italic=True, bold=True)
+    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+
+# ================================================================
 # GUIA DPF (versão por datas)
 # ================================================================
 def criar_aba_dpf(
@@ -244,13 +288,7 @@ def criar_aba_dpf(
 
     ws.append([]); current_row = ws.max_row + 2
 
-    # Rodapé
-    last_col = max(ws.max_column, 9)
-    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=last_col)
-    cell = ws.cell(row=current_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    adicionar_rodape(ws, ultima_coluna=9)
 
 
 # ================================================================
@@ -329,6 +367,9 @@ def criar_aba_dre(wb, fundo, data_atual, data_anterior, dre_tabela, resultado_ex
     for col_num, width in {1:3, 2:65, 3:12, 4:5, 5:12, 6:3}.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
 
+    # Rodapé padronizado
+    adicionar_rodape(ws, ultima_coluna=5)
+
 
 # ================================================================
 # GUIA DMPL (versão por datas)
@@ -338,6 +379,7 @@ def criar_aba_dmpl(
     dados_dmpl, resultado_exercicio, resultado_exercicio_anterior,
     pl_atual, pl_anterior
 ):
+
     ws = wb.create_sheet(title="DMPL")
     ws.sheet_view.showGridLines = False
 
@@ -388,7 +430,7 @@ def criar_aba_dmpl(
     ws.append(["Emissão de cotas", "", ""])
     ws.cell(row=ws.max_row, column=1).font = bold
     ws.append([f"Total de {dados_dmpl['aplicacoes_qtd']} cotas",
-               dados_dmpl["aplicacoes_valor"], dados_dmpl["aplicacoes_valor_ant"]])
+               dados_dmpl["aplicacoes_valor"], "-"])
     ws.append([])
 
     # =====================
@@ -397,7 +439,7 @@ def criar_aba_dmpl(
     ws.append(["Resgate de cotas", "", ""])
     ws.cell(row=ws.max_row, column=1).font = bold
     ws.append([f"Total de {dados_dmpl['resgates_qtd']} cotas",
-               dados_dmpl["resgates_valor"], dados_dmpl["resgates_valor_ant"]])
+               dados_dmpl["resgates_valor"], "-"])
     ws.append([])
 
     # =====================
@@ -426,18 +468,8 @@ def criar_aba_dmpl(
                "-", dados_dmpl["valor_primeiro"]])
     ws.append([])
 
-    # =====================
-    # Observação final
-    # =====================
-    last_col = max(ws.max_column, 3)
-    ws.merge_cells(
-        start_row=ws.max_row + 1, start_column=1,
-        end_row=ws.max_row + 1, end_column=last_col
-    )
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    # Rodapé padronizado
+    adicionar_rodape(ws, ultima_coluna=3)
 
     # =====================
     # Ajuste de largura
@@ -599,13 +631,7 @@ def criar_aba_dfc(wb, fundo, data_atual, data_anterior, dfc_tabela, variacao_atu
     # Linha em branco antes das notas
     ws.append([])
 
-    # Observação final
-    last_col = max(ws.max_column, 3)
-    ws.merge_cells(start_row=ws.max_row + 1, start_column=1, end_row=ws.max_row + 1, end_column=last_col)
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    adicionar_rodape(ws, ultima_coluna=3)
 
     # Largura das colunas
     for col_num, width in {1: 70, 2: 15, 3: 15}.items():

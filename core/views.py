@@ -167,8 +167,60 @@ def importar_mec_view(request):
 
 
 # ===============================
-# DRE / Exportações (sem mudanças)
+# DF RESULTADO / Exportações (sem mudanças)
 # ===============================
+def _pct(v, base):
+    try:
+        v = float(v or 0)
+        b = float(base or 0)
+        return round((v / b) * 100, 2) if b != 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def annotate_percents(dpf: dict, pl_atual_val: float, pl_ant_val: float) -> dict:
+    """
+    Adiciona PERC_ATUAL/PERC_ANTERIOR em:
+      - cada TOTAL_* (com base em ATUAL/ANTERIOR)
+      - cada grupo (com base em SOMA/SOMA_ANTERIOR)
+      - cada subgrupo (com base em ATUAL/ANTERIOR)
+    Sempre usando como base o PL ajustado (pl_atual_val / pl_ant_val).
+    """
+    for sec_name, sec in dpf.items():  # ATIVO, PASSIVO, PL
+        if not isinstance(sec, dict):
+            continue
+
+        for grupo_label, bloco in sec.items():
+            if not isinstance(bloco, dict):
+                continue
+
+            # Totais da seção (ex.: TOTAL_ATIVO, TOTAL_PASSIVO, TOTAL_PL)
+            if grupo_label.startswith("TOTAL_"):
+                atual_tot = bloco.get("ATUAL", 0)
+                ant_tot = bloco.get("ANTERIOR", 0)
+                bloco["PERC_ATUAL"] = _pct(atual_tot, pl_atual_val)
+                bloco["PERC_ANTERIOR"] = _pct(ant_tot, pl_ant_val)
+                continue
+
+            # Grupos normais
+            soma_atual = bloco.get("SOMA", 0)
+            soma_ant = bloco.get("SOMA_ANTERIOR", 0)
+            bloco["PERC_ATUAL"] = _pct(soma_atual, pl_atual_val)
+            bloco["PERC_ANTERIOR"] = _pct(soma_ant, pl_ant_val)
+
+            # Subgrupos
+            for sub_label, valores in bloco.items():
+                if sub_label in ("SOMA", "SOMA_ANTERIOR"):
+                    continue
+                if isinstance(valores, dict) and ("ATUAL" in valores or "ANTERIOR" in valores):
+                    atual_v = valores.get("ATUAL", 0)
+                    ant_v = valores.get("ANTERIOR", 0)
+                    valores["PERC_ATUAL"] = _pct(atual_v, pl_atual_val)
+                    valores["PERC_ANTERIOR"] = _pct(ant_v, pl_ant_val)
+
+    return dpf
+
+
 @login_required
 @company_can_view_data
 def df_resultado(request, fundo_id, data_atual, data_anterior):
@@ -206,6 +258,8 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
     pl_anterior = (dpf_tabela["PL"]["TOTAL_PL"]["ANTERIOR"] or 0) + (resultado_exercicio_anterior or 0)
     total_pl_passivo_atual = pl_atual + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ATUAL"] or 0)
     total_pl_passivo_anterior = pl_anterior + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ANTERIOR"] or 0)
+
+    dpf_tabela = annotate_percents(dpf_tabela, pl_atual, pl_anterior)
 
     # === DMPL ===
     dados_dmpl = gerar_dados_dmpl(
@@ -296,6 +350,8 @@ def exportar_dfs_excel(request, fundo_id, data_atual, data_anterior):
     pl_anterior = (dpf_tabela["PL"]["TOTAL_PL"]["ANTERIOR"] or 0) + (resultado_exercicio_anterior or 0)
     total_pl_passivo_atual = pl_atual + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ATUAL"] or 0)
     total_pl_passivo_anterior = pl_anterior + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ANTERIOR"] or 0)
+
+    dpf_tabela = annotate_percents(dpf_tabela, pl_atual, pl_anterior)
 
     # =====================
     # Criar o workbook

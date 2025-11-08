@@ -25,8 +25,8 @@ def gerar_dados_dpf(
 ) -> Tuple[Dict, Dict[str, int]]:
     """
     Gera a DPF (Demonstração da Posição Financeira) a partir do mapeamento no banco.
-    Agora compara duas datas específicas de balancete (data_atual e data_anterior),
-    em vez de ano/ano-1.
+    Compara duas datas específicas de balancete (data_atual e data_anterior).
+    NÃO calcula percentuais aqui – isso fica para a camada de apresentação (view/Excel).
     """
 
     # 1) Consulta agregada — só tipos 1,2,3 (Ativo, Passivo, PL)
@@ -108,7 +108,7 @@ def gerar_dados_dpf(
         "PL": pl_bloco,
     }
 
-    # 5) Métricas de fechamento (mantidas)
+    # 5) Métricas de fechamento (sem %)
     metricas = {
         "DATA_ATUAL": str(data_atual),
         "DATA_ANTERIOR": str(data_anterior),

@@ -19,7 +19,8 @@
   {% endif %}
 
   {% if fundos %}
-    <div class="card shadow rounded p-4">
+    <!-- CARD 1: Selecionar Fundo -->
+    <div class="card shadow rounded p-4 mb-4">
       <h4 class="mb-3">Selecionar Fundo</h4>
       <select class="form-select" id="select-fundo" aria-label="Escolha um fundo para visualizar ou enviar DF">
         <option selected disabled>Escolha um fundo</option>
@@ -27,11 +28,10 @@
           <option value="{{ fundo.id }}">{{ fundo.nome }} ({{ fundo.cnpj }})</option>
         {% endfor %}
       </select>
-
-      <div id="df-container" class="mt-4" style="display: none;">
-        <!-- Conteúdo será carregado via JS -->
-      </div>
     </div>
+
+    <!-- Aqui fora ficam os outros cards -->
+    <div id="df-container" style="display: none;"></div>
   {% else %}
     <div class="alert alert-warning text-center mt-5" role="alert">
       Você ainda não adicionou nenhum fundo.
@@ -52,82 +52,105 @@
 
     function renderConteudo(fundoId) {
       const datas = datasPorFundo[fundoId] || [];
+      let htmlDatas = "";
+
       if (!datas.length) {
-        container.innerHTML = `<div class="alert alert-info text-center">Nenhum balancete foi importado para esse fundo.</div>`;
-        return;
+        htmlDatas = `<div class="alert alert-info text-center mb-4">
+          Nenhum balancete foi importado para esse fundo.
+        </div>`;
+      } else {
+        let options = datas
+          .map(d => `<option value="${d}">${new Date(d).toLocaleDateString('pt-BR')}</option>`)
+          .join("");
+        htmlDatas = `
+          <div class="card shadow rounded p-4 mb-4">
+            <div class="row justify-content-center">
+              <div class="col-lg-8 col-md-10 col-sm-12 text-center my-2">
+                <h5 class="fw-bold mb-2">Selecionar Período de Análise</h5>
+                <p class="text-muted small mb-4">
+                  Escolha as duas datas de balancete que deseja comparar.
+                </p>
+
+                <div class="row mb-4">
+                  <div class="col-md-6 mb-3 mb-md-0">
+                    <label class="form-label fw-semibold">Saldo Atual</label>
+                    <select id="dataAtual" class="form-select" required>
+                      <option value="" disabled selected>Selecione a data do Saldo Sinal</option>
+                      ${options}
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Saldo Anterior</label>
+                    <select id="dataAnterior" class="form-select" required>
+                      <option value="" disabled selected>Selecione a data do Saldo Anterior</option>
+                      ${options}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="text-center">
+                  <button id="btnGerarDF" class="btn btn-primary px-4" disabled>
+                    <i class="bi bi-graph-up"></i> Gerar Demonstrações Financeiras
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
       }
 
-      let options = datas.map(d => `<option value="${d}">${new Date(d).toLocaleDateString('pt-BR')}</option>`).join("");
-
+      // Agora o formulário é sempre exibido (mesmo sem balancete)
       container.innerHTML = `
-        <hr>
-        <div class="row text-center mb-4">
-          <h5 class="fw-bold">Selecionar Período de Análise</h5>
-          <p class="text-muted small">Escolha as duas datas de balancete que deseja comparar.</p>
-        </div>
-
-        <div class="row mb-4">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Saldo Atual</label>
-            <select id="dataAtual" class="form-select" required>
-              <option value="" disabled selected>Selecione a data mais recente</option>
-              ${options}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">Saldo Anterior</label>
-            <select id="dataAnterior" class="form-select" required>
-              <option value="" disabled selected>Selecione a data de comparação</option>
-              ${options}
-            </select>
-          </div>
-        </div>
-
-        <div class="text-center mb-4">
-          <button id="btnGerarDF" class="btn btn-primary" disabled>
-            <i class="bi bi-graph-up"></i> Gerar Demonstrações Financeiras
-          </button>
-        </div>
-
-        <hr>
+        ${htmlDatas}
         {% if can_enviar_balancete %}
-        <div class="row mt-4">
-          <!-- Coluna Balancete -->
-          <div class="col-md-6 d-flex flex-column align-items-center border-end">
+        <div class="row g-4 mb-4">
+        <!-- CARD BALANCETE -->
+        <div class="col-md-6">
+          <div class="card shadow rounded p-4 h-100">
             <h4 class="mb-3 text-center">Enviar Balancete</h4>
-            <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data" class="w-100 px-3">
+            <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data" class="w-100 px-2">
               {% csrf_token %}
               <input type="hidden" name="fundo_id" value="${fundoId}">
+
               <div class="row mb-3">
-                <div class="col-md-5 text-center">
-                  <label class="form-label">Data de Referência</label>
+                <div class="col-md-4 text-center">
+                  <label class="form-label fw-semibold">Data</label>
                   <input type="date" class="form-control text-center" name="data_referencia" required>
                 </div>
-                <div class="col-md-7 text-center">
-                  <label class="form-label">Planilha Balancete</label>
+                <div class="col-md-8 text-center">
+                  <label class="form-label fw-semibold">Planilha Balancete</label>
                   <input type="file" class="form-control" name="arquivo_balancete" accept=".xlsx,.xls" required>
                 </div>
               </div>
-              <div class="d-flex justify-content-center">
-                <button type="submit" class="btn btn-primary">Enviar Balancete</button>
+
+              <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary px-4">
+                  <i class="bi bi-upload"></i> Enviar Balancete
+                </button>
               </div>
             </form>
           </div>
+        </div>
 
-          <!-- Coluna MEC -->
-          <div class="col-md-6 d-flex flex-column align-items-center">
-            <h4 class="mb-3 text-center">Enviar MEC</h4>
-            <form method="POST" action="{% url 'importar_mec' %}" enctype="multipart/form-data" class="w-100 px-3">
-              {% csrf_token %}
-              <input type="hidden" name="fundo_id" value="${fundoId}">
-              <div class="mb-3 text-center">
-                <label class="form-label">Planilha MEC</label>
-                <input type="file" class="form-control" name="arquivo_mec" accept=".xlsx,.xls" required>
-              </div>
-              <div class="d-flex justify-content-center">
-                <button type="submit" class="btn btn-primary">Enviar MEC</button>
-              </div>
-            </form>
+
+          <!-- CARD MEC -->
+          <div class="col-md-6">
+            <div class="card shadow rounded p-4 h-100">
+              <h4 class="mb-3 text-center">Enviar MEC</h4>
+              <form method="POST" action="{% url 'importar_mec' %}" enctype="multipart/form-data" class="w-100 px-2">
+                {% csrf_token %}
+                <input type="hidden" name="fundo_id" value="${fundoId}">
+                <div class="mb-3 text-center">
+                  <label class="form-label fw-semibold">Planilha MEC</label>
+                  <input type="file" class="form-control" name="arquivo_mec" accept=".xlsx,.xls" required>
+                </div>
+                <div class="d-flex justify-content-center mt-3">
+                  <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-upload"></i> Enviar MEC
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
         {% endif %}
@@ -139,13 +162,13 @@
       const btnGerar = document.getElementById("btnGerarDF");
 
       function validarSelecao() {
-        btnGerar.disabled = !(dataAtual.value && dataAnterior.value && dataAtual.value !== dataAnterior.value);
+        btnGerar.disabled = !(dataAtual?.value && dataAnterior?.value && dataAtual.value !== dataAnterior.value);
       }
 
-      dataAtual.addEventListener("change", validarSelecao);
-      dataAnterior.addEventListener("change", validarSelecao);
+      dataAtual?.addEventListener("change", validarSelecao);
+      dataAnterior?.addEventListener("change", validarSelecao);
 
-      btnGerar.addEventListener("click", function () {
+      btnGerar?.addEventListener("click", function () {
         const atual = dataAtual.value;
         const anterior = dataAnterior.value;
         const url = `/dre-resultado/${fundoId}/${atual}/${anterior}/`;

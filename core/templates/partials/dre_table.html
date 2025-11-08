@@ -1,35 +1,45 @@
-{% load humanize custom_tags %}
+{% load custom_tags %}
 
-<table class="table table-bordered table-sm mt-3 align-middle text-end">
+<!-- Tabela DRE - layout original adaptado para datas -->
+<table class="table table-bordered table-sm mt-2 align-middle">
   <thead class="table-light">
     <tr>
-      <th class="text-start">Conta</th>
-      <th>{{ data_atual|date:"d/m/Y" }}</th>
-      <th>{{ data_anterior|date:"d/m/Y" }}</th>
+      <th style="width: 80%">Descrição</th>
+      <th style="width: 10%" class="text-end">{{ data_atual|date:"d/m/Y" }}</th>
+      <th style="width: 10%" class="text-end">{{ data_anterior|date:"d/m/Y" }}</th>
     </tr>
   </thead>
   <tbody>
-    {% for grupao, grupos in dre_tabela.items %}
-      <tr class="table-primary fw-bold">
-        <td class="text-start">{{ grupao }}</td>
-        <td colspan="2"></td>
+    {% for grupo, valores in dre_tabela.items %}
+      <!-- Linha do grupo principal -->
+      <tr class="table-secondary fw-bold">
+        <td colspan="1">{{ grupo }}</td>
+        <td class="text-end">{{ valores.SOMA|formata_milhar }}</td>
+        <td class="text-end">{{ valores.SOMA_ANTERIOR|formata_milhar }}</td>
       </tr>
 
-      {% for nome, valores in grupos.items %}
-        {% if nome != "SOMA" and nome != "SOMA_ANTERIOR" %}
+      <!-- Subgrupos -->
+      {% for subgrupo, val in valores.items %}
+        {% if subgrupo != 'SOMA' and subgrupo != 'SOMA_ANTERIOR' %}
           <tr>
-            <td class="text-start ps-4">{{ nome }}</td>
-            <td>{{ valores.ATUAL|intcomma }}</td>
-            <td>{{ valores.ANTERIOR|intcomma }}</td>
+            <td>{{ subgrupo }}</td>
+            <td class="text-end">{{ val.ATUAL|formata_milhar }}</td>
+            <td class="text-end">{{ val.ANTERIOR|formata_milhar }}</td>
           </tr>
         {% endif %}
       {% endfor %}
 
-      <tr class="fw-semibold bg-light">
-        <td class="text-start ps-3">Subtotal {{ grupao }}</td>
-        <td>{{ grupos.SOMA|intcomma }}</td>
-        <td>{{ grupos.SOMA_ANTERIOR|intcomma }}</td>
+      <!-- Linha separadora -->
+      <tr class="border-top">
+        <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
       </tr>
     {% endfor %}
+
+    <!-- Resultado do exercício -->
+    <tr class="table-secondary fw-bold">
+      <td>Resultado do exercício</td>
+      <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
+      <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
+    </tr>
   </tbody>
 </table>

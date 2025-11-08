@@ -1,43 +1,108 @@
-{% load humanize custom_tags %}
+{% load custom_tags %}
 
-<table class="table table-bordered table-sm mt-3 align-middle text-end">
+<!-- Tabela DMPL - layout original adaptado para datas -->
+<table class="table table-bordered table-sm mt-2 align-middle">
   <thead class="table-light">
     <tr>
-      <th class="text-start">Descrição</th>
-      <th>{{ data_atual|date:"d/m/Y" }}</th>
-      <th>{{ data_anterior|date:"d/m/Y" }}</th>
+      <th style="width: 80%">Descrição</th>
+      <th style="width: 10%" class="text-end">{{ data_atual|date:"d/m/Y" }}</th>
+      <th style="width: 10%" class="text-end">{{ data_anterior|date:"d/m/Y" }}</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td class="text-start">Quantidade de cotas no início</td>
-      <td>{{ dados_dmpl.qtd_cotas_inicio }}</td>
-      <td>{{ dados_dmpl.qtd_cotas_inicio_ant }}</td>
-    </tr>
-    <tr>
-      <td class="text-start">Quantidade de cotas no final</td>
-      <td>{{ dados_dmpl.qtd_cotas_fim }}</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td class="text-start">Valor unitário da cota (R$)</td>
-      <td>{{ dados_dmpl.cota_fim }}</td>
-      <td>{{ dados_dmpl.cota_inicio_ant }}</td>
-    </tr>
-    <tr>
-      <td class="text-start">Aplicações de cotas (R$ mil)</td>
-      <td>{{ dados_dmpl.aplicacoes_valor }}</td>
-      <td>{{ dados_dmpl.aplicacoes_valor_ant }}</td>
-    </tr>
-    <tr>
-      <td class="text-start">Resgates de cotas (R$ mil)</td>
-      <td>{{ dados_dmpl.resgates_valor }}</td>
-      <td>{{ dados_dmpl.resgates_valor_ant }}</td>
-    </tr>
+
+    <!-- PL inicial -->
     <tr class="table-secondary fw-bold">
-      <td class="text-start">Patrimônio líquido antes do resultado</td>
-      <td>{{ dados_dmpl.pl_antes_resultado_periodo }}</td>
-      <td>{{ dados_dmpl.valor_ultimo_ant }}</td>
+      <td colspan="1">Patrimônio líquido no início do período</td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
     </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio|formata_milhar }}</strong></td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
+      <td class="text-end">-</td>
+    </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio_ant|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio_ant|formata_milhar }}</strong></td>
+      <td class="text-end">-</td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
+    </tr>
+
+    <!-- Separador -->
+    <tr class="border-top">
+      <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- Emissão de cotas -->
+    <tr class="table-secondary fw-bold">
+      <td colspan="3">Emissão de cotas</td>
+    </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.aplicacoes_qtd|formata_milhar }}</strong> cotas subordinadas</td>
+      <td class="text-end">{{ dados_dmpl.aplicacoes_valor|formata_milhar }}</td>
+      <td class="text-end">{{ dados_dmpl.aplicacoes_valor_ant|formata_milhar }}</td>
+    </tr>
+
+    <!-- Separador -->
+    <tr class="border-top">
+      <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- Resgate de cotas -->
+    <tr class="table-secondary fw-bold">
+      <td colspan="3">Resgate de cotas</td>
+    </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.resgates_qtd|formata_milhar }}</strong> cotas subordinadas</td>
+      <td class="text-end">{{ dados_dmpl.resgates_valor|formata_milhar }}</td>
+      <td class="text-end">{{ dados_dmpl.resgates_valor_ant|formata_milhar }}</td>
+    </tr>
+
+    <!-- Separador -->
+    <tr class="border-top">
+      <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- PL antes do resultado -->
+    <tr class="table-secondary fw-bold">
+      <td colspan="1">Patrimônio líquido antes do resultado do período</td>
+      <td class="text-end">{{ dados_dmpl.pl_antes_resultado_periodo|formata_milhar }}</td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro_ant|formata_milhar }}</td>
+    </tr>
+
+    <!-- Separador -->
+    <tr class="border-top">
+      <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- Resultado do período -->
+    <tr class="table-secondary fw-bold">
+      <td colspan="1">Resultado do período</td>
+      <td class="text-end">{{ resultado_exercicio|formata_milhar }}</td>
+      <td class="text-end">{{ resultado_exercicio_anterior|formata_milhar }}</td>
+    </tr>
+
+    <!-- Separador -->
+    <tr class="border-top">
+      <td colspan="3" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- PL final -->
+    <tr class="table-secondary fw-bold">
+      <td colspan="1">Patrimônio líquido no final do exercício/período</td>
+      <td class="text-end">{{ pl_ajustado_atual|formata_milhar }}</td>
+      <td class="text-end">{{ pl_ajustado_anterior|formata_milhar }}</td>
+    </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.qtd_cotas_fim|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_fim|formata_milhar }}</strong></td>
+      <td class="text-end">{{ dados_dmpl.valor_ultimo|formata_milhar }}</td>
+      <td class="text-end">-</td>
+    </tr>
+    <tr>
+      <td>Total de <strong>{{ dados_dmpl.qtd_cotas_inicio|formata_milhar }}</strong> cotas subordinadas a <strong>R${{ dados_dmpl.cota_inicio|formata_milhar }}</strong></td>
+      <td class="text-end">-</td>
+      <td class="text-end">{{ dados_dmpl.valor_primeiro|formata_milhar }}</td>
+    </tr>
+
   </tbody>
 </table>
