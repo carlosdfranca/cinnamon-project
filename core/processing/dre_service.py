@@ -13,7 +13,7 @@ def _int_mil(v) -> int:
         return 0
 
 
-def gerar_dados_dre(fundo_id: int, data_atual: date, data_anterior: date) -> Tuple[Dict, int, int]:
+def gerar_dados_dre(fundo_id, data_atual, data_anterior, dividir_por_mil=True, zerar_anterior=False):
     """
     Monta a DRE comparando duas datas específicas de balancete (saldo final).
     Considera apenas grupões de tipo=4 (Resultado).
@@ -23,7 +23,7 @@ def gerar_dados_dre(fundo_id: int, data_atual: date, data_anterior: date) -> Tup
         BalanceteItem.objects
         .filter(
             fundo_id=fundo_id,
-            data_referencia__in=[data_atual, data_anterior],
+            data_referencia__in=[data_atual, data_anterior] if not zerar_anterior else [data_atual],
             conta_corrente__grupo_pequeno__grupao__tipo=4,
         )
         .values(
@@ -52,8 +52,9 @@ def gerar_dados_dre(fundo_id: int, data_atual: date, data_anterior: date) -> Tup
 
         for grupinho in sorted(grupao.grupinhos.all(), key=lambda g: g.nome):
             atual = _int_mil(somas.get((grupao.id, grupinho.id, data_atual), 0.0))
-            anterior = _int_mil(somas.get((grupao.id, grupinho.id, data_anterior), 0.0))
+            anterior = 0 if zerar_anterior else _int_mil(somas.get((grupao.id, grupinho.id, data_anterior), 0.0))
 
+            # manter consistência
             if atual == 0 and anterior == 0:
                 continue
 
@@ -67,5 +68,8 @@ def gerar_dados_dre(fundo_id: int, data_atual: date, data_anterior: date) -> Tup
             dict_tabela[grupao.nome] = bloco
             resultado_exercicio += soma_atual_i
             resultado_exercicio_anterior += soma_anterior_i
+
+    if zerar_anterior:
+        resultado_exercicio_anterior = 0  # força resultado anterior como 0
 
     return dict_tabela, resultado_exercicio, resultado_exercicio_anterior

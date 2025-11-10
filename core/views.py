@@ -227,10 +227,12 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
     """
     Exibe as Demonstrações Financeiras comparando duas datas de balancete.
     """
+    zerar_anterior = data_anterior == "ZERADO"
+
     # 🔹 Conversão de strings para objetos date
     try:
         data_atual = datetime.strptime(data_atual, "%Y-%m-%d").date()
-        data_anterior = datetime.strptime(data_anterior, "%Y-%m-%d").date()
+        data_anterior = None if zerar_anterior else datetime.strptime(data_anterior, "%Y-%m-%d").date()
     except ValueError:
         messages.error(request, "Formato de data inválido. Use o padrão YYYY-MM-DD.")
         return redirect("demonstracao_financeira")
@@ -239,18 +241,12 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
     fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
     fundo = get_object_or_404(fundo_qs, id=fundo_id)
 
-    # === DRE ===
+    # Passar flag para services
     dre_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior,
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
     )
-
-    # === DPF ===
     dpf_tabela, _metricas_dpf = gerar_dados_dpf(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior,
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
     )
 
     # === PL ajustado ===
@@ -261,25 +257,23 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
 
     dpf_tabela = annotate_percents(dpf_tabela, pl_atual, pl_anterior)
 
-    # === DMPL ===
     dados_dmpl = gerar_dados_dmpl(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior,
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
+    )
+    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
     )
 
-    # === DFC ===
-    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior,
-    )
+    if zerar_anterior:
+        data_anterior_str = "ZERADO"
+    else:
+        data_anterior_str = data_anterior.strftime("%Y-%m-%d") if data_anterior else "ZERADO"
 
     # === Renderiza o template ===
     return render(request, "df_resultado.html", {
         "fundo": fundo,
         "data_atual": data_atual,
-        "data_anterior": data_anterior,
+        "data_anterior": data_anterior_str,
         "dre_tabela": dre_tabela,
         "dpf_tabela": dpf_tabela,
         "dados_dmpl": dados_dmpl,
@@ -306,9 +300,11 @@ def exportar_dfs_excel(request, fundo_id, data_atual, data_anterior):
     # =====================
     # Conversão das datas
     # =====================
+    zerar_anterior = data_anterior == "ZERADO"
+
     try:
         data_atual = datetime.strptime(data_atual, "%Y-%m-%d").date()
-        data_anterior = datetime.strptime(data_anterior, "%Y-%m-%d").date()
+        data_anterior = None if zerar_anterior else datetime.strptime(data_anterior, "%Y-%m-%d").date()
     except ValueError:
         messages.error(request, "Datas inválidas para exportação.")
         return redirect("demonstracao_financeira")
@@ -323,35 +319,26 @@ def exportar_dfs_excel(request, fundo_id, data_atual, data_anterior):
     # Gerar dados das DFs
     # =====================
     dre_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
     )
-    dpf_tabela, _ = gerar_dados_dpf(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior
-    )
-    dados_dmpl = gerar_dados_dmpl(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior
-    )
-    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(
-        fundo_id=fundo.id,
-        data_atual=data_atual,
-        data_anterior=data_anterior
+    dpf_tabela, _metricas_dpf = gerar_dados_dpf(
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
     )
 
-    # =====================
-    # Cálculos auxiliares
-    # =====================
+    # === PL ajustado ===
     pl_atual = (dpf_tabela["PL"]["TOTAL_PL"]["ATUAL"] or 0) + (resultado_exercicio or 0)
     pl_anterior = (dpf_tabela["PL"]["TOTAL_PL"]["ANTERIOR"] or 0) + (resultado_exercicio_anterior or 0)
     total_pl_passivo_atual = pl_atual + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ATUAL"] or 0)
     total_pl_passivo_anterior = pl_anterior + (dpf_tabela["PASSIVO"]["TOTAL_PASSIVO"]["ANTERIOR"] or 0)
 
     dpf_tabela = annotate_percents(dpf_tabela, pl_atual, pl_anterior)
+
+    dados_dmpl = gerar_dados_dmpl(
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
+    )
+    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(
+        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
+    )
 
     # =====================
     # Criar o workbook

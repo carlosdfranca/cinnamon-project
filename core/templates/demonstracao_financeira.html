@@ -75,7 +75,7 @@
                   <div class="col-md-6 mb-3 mb-md-0">
                     <label class="form-label fw-semibold">Saldo Atual</label>
                     <select id="dataAtual" class="form-select" required>
-                      <option value="" disabled selected>Selecione a data do Saldo Sinal</option>
+                      <option value="" disabled selected>Selecione a data do Saldo Final</option>
                       ${options}
                     </select>
                   </div>
@@ -83,6 +83,7 @@
                     <label class="form-label fw-semibold">Saldo Anterior</label>
                     <select id="dataAnterior" class="form-select" required>
                       <option value="" disabled selected>Selecione a data do Saldo Anterior</option>
+                      <option value="ZERADO">Zerado (Início do Fundo)</option>
                       ${options}
                     </select>
                   </div>
