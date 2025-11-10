@@ -15,16 +15,66 @@ double_bottom_border = Border(bottom=Side(style="double"))
 
 
 # ================================================================
-# GUIA DPF
+# Função auxiliar para rodapé padronizado
 # ================================================================
-def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_passivo_atual, total_pl_passivo_anterior):
+def adicionar_rodape(ws, ultima_coluna=3, mensagem=None):
+    """
+    Insere o rodapé padrão em uma planilha, garantindo exatamente
+    UMA linha em branco entre os dados e o rodapé.
+
+    - Se a última linha já for vazia, reaproveitamos como "espaço".
+    - Se não for, criamos uma linha vazia antes do rodapé.
+    """
+    from openpyxl.styles import Font, Alignment
+
+    if not mensagem:
+        mensagem = "As notas explicativas são parte integrante das demonstrações financeiras."
+
+    # Verifica se a última linha já está em branco
+    last_row = ws.max_row
+    is_blank = True
+    for col in range(1, ws.max_column + 1):
+        if ws.cell(row=last_row, column=col).value not in (None, ""):
+            is_blank = False
+            break
+
+    # Se a última linha tiver conteúdo, adicionamos UMA linha em branco
+    if not is_blank:
+        ws.append([]); last_row = ws.max_row + 1
+
+    # Rodapé será sempre na linha seguinte
+    footer_row = last_row + 1
+    last_col = max(ws.max_column, ultima_coluna)
+
+    ws.merge_cells(
+        start_row=footer_row,
+        start_column=1,
+        end_row=footer_row,
+        end_column=last_col
+    )
+    cell = ws.cell(row=footer_row, column=1)
+    cell.value = mensagem
+    cell.font = Font(italic=True, bold=True)
+    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+
+# ================================================================
+# GUIA DPF (versão por datas)
+# ================================================================
+def criar_aba_dpf(
+    wb, fundo, data_atual, data_anterior,
+    dpf_tabela, pl_atual, pl_anterior,
+    total_pl_passivo_atual, total_pl_passivo_anterior
+):
     ws = wb.active
     ws.title = "DPF"
     ws.sheet_view.showGridLines = False
 
     nome_fundo = str(fundo.nome).upper()
 
-    # Cabeçalho
+    # =====================
+    # Cabeçalho principal
+    # =====================
     ws["A1"] = nome_fundo; ws["A1"].font = bold; ws["A1"].alignment = left
     ws["A2"] = f"CNPJ: {fundo.cnpj}"; ws["A2"].font = bold; ws["A2"].alignment = left
     ws["A3"] = f"Administrado por {fundo.empresa.nome}"; ws["A3"].alignment = left
@@ -32,15 +82,17 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
 
     ws.append([])
     ws["A6"] = "Demonstração da Posição Financeira"; ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Em 31 de dezembro de {ano} e {ano - 1}"; ws["A7"].alignment = left
+    ws["A7"] = f"Em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais, exceto quando apresentado de outra forma)"
     ws["A8"].font = italic; ws["A8"].alignment = left
     ws.append([])
 
-    # Inserir coluna vazia
+    # Inserir coluna vazia após a primeira
     ws.insert_cols(2)
 
+    # =====================
     # Mapa de colunas
+    # =====================
     COL = {
         "DESC": 1,
         "SEP_LEFT": 2,
@@ -68,12 +120,17 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
     for idx, w in col_widths.items():
         ws.column_dimensions[get_column_letter(idx)].width = w
 
-    # Cabeçalho anos
+    # =====================
+    # Cabeçalho de datas
+    # =====================
     row0 = ws.max_row + 2
-    ws.cell(row=row0, column=COL["Q_CUR"], value=f"31/12/{ano}").font = bold
+    ws.cell(row=row0, column=COL["Q_CUR"],
+            value=data_atual.strftime("%d/%m/%Y")).font = bold
     ws.cell(row=row0, column=COL["Q_CUR"]).alignment = center
     ws.merge_cells(start_row=row0, start_column=COL["Q_CUR"], end_row=row0, end_column=COL["P_CUR"])
-    ws.cell(row=row0, column=COL["Q_PRI"], value=f"31/12/{ano - 1}").font = bold
+
+    ws.cell(row=row0, column=COL["Q_PRI"],
+            value=data_anterior.strftime("%d/%m/%Y")).font = bold
     ws.cell(row=row0, column=COL["Q_PRI"]).alignment = center
     ws.merge_cells(start_row=row0, start_column=COL["Q_PRI"], end_row=row0, end_column=COL["P_PRI"])
 
@@ -83,10 +140,12 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
         (COL["DESC"], "Ativo", center),
         (COL["Q_CUR"], "Quant", center),
         (COL["R_CUR"], "R$", center),
-        (COL["P_CUR"], "% sobre o patrimônio líquido", Alignment(horizontal="center", vertical="center", wrap_text=True)),
+        (COL["P_CUR"], "% sobre o patrimônio líquido",
+         Alignment(horizontal="center", vertical="center", wrap_text=True)),
         (COL["Q_PRI"], "Quant", center),
         (COL["R_PRI"], "R$", center),
-        (COL["P_PRI"], "% sobre o patrimônio líquido", Alignment(horizontal="center", vertical="center", wrap_text=True)),
+        (COL["P_PRI"], "% sobre o patrimônio líquido",
+         Alignment(horizontal="center", vertical="center", wrap_text=True)),
     ]
     for col, val, align in headers:
         c = ws.cell(row=row1, column=col, value=val)
@@ -94,7 +153,9 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
         c.alignment = align
         c.border = bottom_border
 
+    # =====================
     # Helpers internos
+    # =====================
     def _dash(v):
         try:
             return "-" if (v is None or float(v) == 0) else v
@@ -153,7 +214,9 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
         except:
             return 0.0
 
-    # ===== ATIVO =====
+    # =====================
+    # Seções: ATIVO, PASSIVO, PL
+    # =====================
     ativo = dpf_tabela["ATIVO"]
     for grupo_label, bloco in ativo.items():
         if grupo_label.startswith("TOTAL_"):
@@ -211,13 +274,13 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
 
     ws.append([]); current_row = ws.max_row + 2
 
-    # PL ajustado
+    # ===== PL =====
     _add_linha("Patrimônio líquido", pl_atual, 100.00, pl_anterior, 100.00,
                bold_line=True, underline_kind=underline_double)
 
     ws.append([]); current_row = ws.max_row + 2
 
-    # Total PL + Passivo
+    # ===== TOTAL PL + PASSIVO =====
     _add_linha("Total do patrimônio líquido e do passivo",
                total_pl_passivo_atual, _perc_from(total_pl_passivo_atual, pl_atual),
                total_pl_passivo_anterior, _perc_from(total_pl_passivo_anterior, pl_anterior),
@@ -225,19 +288,13 @@ def criar_aba_dpf(wb, fundo, ano, dpf_tabela, pl_atual, pl_anterior, total_pl_pa
 
     ws.append([]); current_row = ws.max_row + 2
 
-    last_col = max(ws.max_column, 9)
-    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=last_col)
-    cell = ws.cell(row=current_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
-
+    adicionar_rodape(ws, ultima_coluna=9)
 
 
 # ================================================================
-# GUIA DRE
+# GUIA DRE (versão por datas)
 # ================================================================
-def criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exercicio_anterior):
+def criar_aba_dre(wb, fundo, data_atual, data_anterior, dre_tabela, resultado_exercicio, resultado_exercicio_anterior):
     ws = wb.create_sheet(title="DRE")
     ws.sheet_view.showGridLines = False
 
@@ -252,19 +309,21 @@ def criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exe
 
     ws["A6"] = "Demonstração do Resultado do Exercício"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Exercícios findos em 31 de dezembro de {ano} e {ano - 1}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais)"
     ws["A8"].font = italic; ws["A8"].alignment = left
     ws.append([])
 
-    # Cabeçalho colunas
+    # Cabeçalho das colunas
     ws.insert_cols(3)
-    ws.append(["", f"31/12/{ano}", "", f"31/12/{ano - 1}"])
+    ws.append(["", data_atual.strftime("%d/%m/%Y"), "", data_anterior.strftime("%d/%m/%Y")])
     row_header = ws.max_row
     for col in (2, 4):
         c = ws.cell(row=row_header, column=col)
-        c.alignment = right; c.font = bold; c.border = bottom_border
+        c.alignment = right
+        c.font = bold
+        c.border = bottom_border
 
     # Linhas da DRE
     for grupo, dados in dre_tabela.items():
@@ -274,8 +333,10 @@ def criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exe
         ws.cell(row=row, column=1).alignment = left
         for col in (2, 4):
             cell = ws.cell(row=row, column=col)
-            cell.font = bold; cell.alignment = right
-            cell.number_format = "#,##0_);(#,##0)"; cell.border = bottom_border
+            cell.font = bold
+            cell.alignment = right
+            cell.number_format = "#,##0_);(#,##0)"
+            cell.border = bottom_border
 
         for item, valores in dados.items():
             if item in ["SOMA", "SOMA_ANTERIOR"]:
@@ -289,7 +350,7 @@ def criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exe
                 cell.number_format = "#,##0_);(#,##0)"
         ws.append([])
 
-    # Resultado
+    # Resultado final
     ws.append(["Resultado do exercício", resultado_exercicio, "", resultado_exercicio_anterior])
     row = ws.max_row
     ws.cell(row=row, column=1).font = bold
@@ -297,24 +358,36 @@ def criar_aba_dre(wb, fundo, ano, dre_tabela, resultado_exercicio, resultado_exe
     for col in (2, 4):
         cell = ws.cell(row=row, column=col)
         cell.number_format = "#,##0_);(#,##0)"
-        cell.font = bold; cell.alignment = right; cell.border = double_bottom_border
+        cell.font = bold
+        cell.alignment = right
+        cell.border = double_bottom_border
 
-    # Ajuste largura
+    # Ajuste de largura
     ws.insert_cols(1)
     for col_num, width in {1:3, 2:65, 3:12, 4:5, 5:12, 6:3}.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
 
+    # Rodapé padronizado
+    adicionar_rodape(ws, ultima_coluna=5)
+
 
 # ================================================================
-# GUIA DMPL
+# GUIA DMPL (versão por datas)
 # ================================================================
-def criar_aba_dmpl(wb, fundo, ano, dados_dmpl, resultado_exercicio, resultado_exercicio_anterior, pl_atual, pl_anterior):
+def criar_aba_dmpl(
+    wb, fundo, data_atual, data_anterior,
+    dados_dmpl, resultado_exercicio, resultado_exercicio_anterior,
+    pl_atual, pl_anterior
+):
+
     ws = wb.create_sheet(title="DMPL")
     ws.sheet_view.showGridLines = False
 
     nome_fundo = str(fundo.nome).upper()
 
+    # =====================
     # Cabeçalho
+    # =====================
     ws["A1"] = nome_fundo; ws["A1"].font = bold; ws["A1"].alignment = left
     ws["A2"] = f"CNPJ: {fundo.cnpj}"; ws["A2"].font = bold; ws["A2"].alignment = left
     ws["A3"] = f"Administrado por {fundo.empresa.nome}"; ws["A3"].alignment = left
@@ -323,73 +396,100 @@ def criar_aba_dmpl(wb, fundo, ano, dados_dmpl, resultado_exercicio, resultado_ex
 
     ws["A6"] = "Demonstração das Mutações do Patrimônio Líquido"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Exercícios findos em 31 de dezembro de {ano} e {ano-1}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais, exceto o valor unitário da cota)"
     ws["A8"].font = italic; ws["A8"].alignment = left
     ws.append([])
 
+    # =====================
     # Cabeçalho colunas
-    ws.append(["Descrição", f"31/12/{ano}", f"31/12/{ano-1}"])
+    # =====================
+    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_anterior.strftime("%d/%m/%Y")])
     row_header = ws.max_row
     for col in (2, 3):
         c = ws.cell(row=row_header, column=col)
-        c.alignment = right; c.font = bold; c.border = bottom_border
+        c.alignment = right
+        c.font = bold
+        c.border = bottom_border
 
+    # =====================
     # PL inicial
-    ws.append(["Patrimônio líquido no início do período", dados_dmpl["valor_primeiro"], dados_dmpl["valor_primeiro_ant"]])
-    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio']} cotas a R$ {dados_dmpl['cota_inicio']}", dados_dmpl["valor_primeiro"], "-"])
-    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio_ant']} cotas a R$ {dados_dmpl['cota_inicio_ant']}", "-", dados_dmpl["valor_primeiro_ant"]])
+    # =====================
+    ws.append(["Patrimônio líquido no início do período",
+               dados_dmpl["valor_primeiro"], dados_dmpl["valor_primeiro_ant"]])
+    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio']} cotas a R$ {dados_dmpl['cota_inicio']}",
+               dados_dmpl["valor_primeiro"], "-"])
+    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio_ant']} cotas a R$ {dados_dmpl['cota_inicio_ant']}",
+               "-", dados_dmpl["valor_primeiro_ant"]])
     ws.append([])
 
+    # =====================
     # Emissão
-    ws.append(["Emissão de cotas", "", ""]); ws.cell(row=ws.max_row, column=1).font = bold
-    ws.append([f"Total de {dados_dmpl['aplicacoes_qtd']} cotas", dados_dmpl["aplicacoes_valor"], dados_dmpl["aplicacoes_valor_ant"]])
+    # =====================
+    ws.append(["Emissão de cotas", "", ""])
+    ws.cell(row=ws.max_row, column=1).font = bold
+    ws.append([f"Total de {dados_dmpl['aplicacoes_qtd']} cotas",
+               dados_dmpl["aplicacoes_valor"], "-"])
     ws.append([])
 
+    # =====================
     # Resgate
-    ws.append(["Resgate de cotas", "", ""]); ws.cell(row=ws.max_row, column=1).font = bold
-    ws.append([f"Total de {dados_dmpl['resgates_qtd']} cotas", dados_dmpl["resgates_valor"], dados_dmpl["resgates_valor_ant"]])
+    # =====================
+    ws.append(["Resgate de cotas", "", ""])
+    ws.cell(row=ws.max_row, column=1).font = bold
+    ws.append([f"Total de {dados_dmpl['resgates_qtd']} cotas",
+               dados_dmpl["resgates_valor"], "-"])
     ws.append([])
 
+    # =====================
     # PL antes do resultado
-    ws.append(["Patrimônio líquido antes do resultado do período",
-               dados_dmpl["pl_antes_resultado_periodo"], dados_dmpl["valor_primeiro_ant"]])
+    # =====================
+    ws.append([
+        "Patrimônio líquido antes do resultado do período",
+        dados_dmpl["pl_antes_resultado_periodo"],
+        dados_dmpl["valor_primeiro_ant"]
+    ])
     ws.append([])
 
+    # =====================
     # Resultado
+    # =====================
     ws.append(["Resultado do período", resultado_exercicio, resultado_exercicio_anterior])
     ws.append([])
 
+    # =====================
     # PL final
+    # =====================
     ws.append(["Patrimônio líquido no final do exercício/período", pl_atual, pl_anterior])
-    ws.append([f"Total de {dados_dmpl['qtd_cotas_fim']} cotas a R$ {dados_dmpl['cota_fim']}", dados_dmpl["valor_ultimo"], "-"])
-    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio']} cotas a R$ {dados_dmpl['cota_inicio']}", "-", dados_dmpl["valor_primeiro"]])
+    ws.append([f"Total de {dados_dmpl['qtd_cotas_fim']} cotas a R$ {dados_dmpl['cota_fim']}",
+               dados_dmpl["valor_ultimo"], "-"])
+    ws.append([f"Total de {dados_dmpl['qtd_cotas_inicio']} cotas a R$ {dados_dmpl['cota_inicio']}",
+               "-", dados_dmpl["valor_primeiro"]])
     ws.append([])
 
-    # Observação
-    last_col = max(ws.max_column, 3)
-    ws.merge_cells(start_row=ws.max_row+1, start_column=1, end_row=ws.max_row+1, end_column=last_col)
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    # Rodapé padronizado
+    adicionar_rodape(ws, ultima_coluna=3)
 
-    # Ajuste largura
-    for col_num, width in {1:65, 2:15, 3:15}.items():
+    # =====================
+    # Ajuste de largura
+    # =====================
+    for col_num, width in {1: 65, 2: 15, 3: 15}.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width
 
 
 # ================================================================
-# GUIA DFC
+# GUIA DFC (versão por datas)
 # ================================================================
-def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
+def criar_aba_dfc(wb, fundo, data_atual, data_anterior, dfc_tabela, variacao_atual, variacao_ant):
     ws = wb.create_sheet(title="DFC")
     ws.sheet_view.showGridLines = False
 
     nome_fundo = str(fundo.nome).upper()
 
+    # =====================
     # Cabeçalho
+    # =====================
     ws["A1"] = nome_fundo; ws["A1"].font = bold; ws["A1"].alignment = left
     ws["A2"] = f"CNPJ: {fundo.cnpj}"; ws["A2"].font = bold; ws["A2"].alignment = left
     ws["A3"] = f"Administrado por {fundo.empresa.nome}"; ws["A3"].alignment = left
@@ -398,20 +498,26 @@ def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
 
     ws["A6"] = "Demonstração dos Fluxos de Caixa – Método indireto"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Exercícios findos em 31 de dezembro de {ano} e {ano - 1}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais)"
     ws["A8"].font = italic; ws["A8"].alignment = left
     ws.append([])
 
+    # =====================
     # Cabeçalho colunas
-    ws.append(["Descrição", f"31/12/{ano}", f"31/12/{ano-1}"])
+    # =====================
+    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_anterior.strftime("%d/%m/%Y")])
     row_header = ws.max_row
     for col in (2, 3):
         c = ws.cell(row=row_header, column=col)
-        c.alignment = right; c.font = bold; c.border = bottom_border
+        c.alignment = right
+        c.font = bold
+        c.border = bottom_border
 
+    # =====================
     # Helpers
+    # =====================
     def _write_linha(descricao, atual=None, anterior=None, bold_=False, underline=None, indent=False):
         ws.append([descricao, atual, anterior])
         r = ws.max_row
@@ -427,17 +533,25 @@ def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
             if underline:
                 cell.border = underline
 
-    # === BLOCO 1: ATIVIDADES OPERACIONAIS ===
+    # =============================================================
+    # BLOCO 1: ATIVIDADES OPERACIONAIS
+    # =============================================================
     bloco_op = dfc_tabela.get("fluxo_operacionais", {})
     _write_linha(bloco_op.get("titulo", ""), bold_=True)
     ws.append([])
 
-    # Resultado líquido
+    # Resultado líquido do período
     resultado = bloco_op.get("resultado_liquido", {})
-    _write_linha(resultado.get("titulo", ""), resultado.get("ATUAL"), resultado.get("ANTERIOR"),
-                 bold_=True, underline=underline_double, indent=True)
+    _write_linha(
+        resultado.get("titulo", ""),
+        resultado.get("ATUAL"),
+        resultado.get("ANTERIOR"),
+        bold_=True,
+        underline=underline_double,
+        indent=True,
+    )
 
-    # ---- Ajustes (subbloco interno)
+    # ---- Ajustes
     ajustes = bloco_op.get("ajustes", {})
     if ajustes:
         ws.append([])
@@ -455,11 +569,20 @@ def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
             continue
         bold_line = "caixa" in chave
         underline_kind = underline_double if "caixa" in chave else None
-        _write_linha(item.get("titulo", ""), item.get("ATUAL"), item.get("ANTERIOR"), bold_=bold_line, underline=underline_kind, indent=True)
+        _write_linha(
+            item.get("titulo", ""),
+            item.get("ATUAL"),
+            item.get("ANTERIOR"),
+            bold_=bold_line,
+            underline=underline_kind,
+            indent=True,
+        )
 
     ws.append([])
 
-    # === BLOCO 2: FINANCIAMENTO ===
+    # =============================================================
+    # BLOCO 2: ATIVIDADES DE FINANCIAMENTO
+    # =============================================================
     bloco_fin = dfc_tabela.get("fluxo_financiamento", {})
     _write_linha(bloco_fin.get("titulo", ""), bold_=True)
     for chave, item in bloco_fin.items():
@@ -467,17 +590,32 @@ def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
             continue
         bold_line = "caixa" in chave
         underline_kind = underline_double if "caixa" in chave else None
-        _write_linha(item.get("titulo", ""), item.get("ATUAL"), item.get("ANTERIOR"), bold_=bold_line, underline=underline_kind, indent=True)
+        _write_linha(
+            item.get("titulo", ""),
+            item.get("ATUAL"),
+            item.get("ANTERIOR"),
+            bold_=bold_line,
+            underline=underline_kind,
+            indent=True,
+        )
     ws.append([])
 
-    # === BLOCO 3: VARIAÇÃO E CAIXA FINAL ===
-    # Variação no caixa (agora com sublinhado duplo)
+    # =============================================================
+    # BLOCO 3: VARIAÇÃO E CAIXA FINAL
+    # =============================================================
+
+    # Variação no caixa e equivalentes (linha dupla)
     item_var = dfc_tabela.get("variacao_caixa", {})
     if item_var:
-        _write_linha(item_var.get("titulo", ""), item_var.get("ATUAL"), item_var.get("ANTERIOR"),
-                     bold_=True, underline=underline_double)
+        _write_linha(
+            item_var.get("titulo", ""),
+            item_var.get("ATUAL"),
+            item_var.get("ANTERIOR"),
+            bold_=True,
+            underline=underline_double,
+        )
 
-    # Linha em branco antes do início do caixa
+    # Linha em branco antes do caixa inicial/final
     ws.append([])
 
     # Caixa início
@@ -490,17 +628,11 @@ def criar_aba_dfc(wb, fundo, ano, dfc_tabela, variacao_atual, variacao_ant):
     if item_fim:
         _write_linha(item_fim.get("titulo", ""), item_fim.get("ATUAL"), item_fim.get("ANTERIOR"), bold_=True)
 
-    # Linha em branco antes das notas explicativas
+    # Linha em branco antes das notas
     ws.append([])
 
-    # Observação final
-    last_col = max(ws.max_column, 3)
-    ws.merge_cells(start_row=ws.max_row+1, start_column=1, end_row=ws.max_row+1, end_column=last_col)
-    cell = ws.cell(row=ws.max_row, column=1)
-    cell.value = "As notas explicativas são parte integrante das demonstrações financeiras."
-    cell.font = Font(italic=True, bold=True)
-    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    adicionar_rodape(ws, ultima_coluna=3)
 
     # Largura das colunas
-    for col_num, width in {1:70, 2:15, 3:15}.items():
+    for col_num, width in {1: 70, 2: 15, 3: 15}.items():
         ws.column_dimensions[get_column_letter(col_num)].width = width

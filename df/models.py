@@ -117,7 +117,7 @@ class BalanceteItem(models.Model):
         related_name="balancete",
         db_index=True,
     )
-    ano = models.IntegerField()
+    data_referencia = models.DateField(null=True, blank=True, db_index=True)
     conta_corrente = models.ForeignKey(
         MapeamentoContas,
         on_delete=models.PROTECT,
@@ -133,19 +133,19 @@ class BalanceteItem(models.Model):
         ordering = ["fundo", "conta_corrente"]
         constraints = [
             models.UniqueConstraint(
-                fields=["fundo", "ano", "conta_corrente"],
-                name="uq_balancete_fundo_ano_conta"
+                fields=["fundo", "data_referencia", "conta_corrente"],
+                name="uq_balancete_fundo_data_conta"
             )
         ]
         indexes = [
-            models.Index(fields=["ano"], name="idx_bal_ano"),
-            models.Index(fields=["fundo", "ano"], name="idx_bal_fundo_ano"),
+            models.Index(fields=["data_referencia"], name="idx_bal_data_referencia"),
+            models.Index(fields=["fundo", "data_referencia"], name="idx_bal_fundo_data_referencia"),
         ]
 
     def __str__(self):
         conta = self.conta_corrente.conta if self.conta_corrente else "—"
         saldo = f"{self.saldo_final:.2f}" if self.saldo_final is not None else "—"
-        return f"[{self.ano}] {self.fundo.nome} | {conta} | Saldo: R$ {saldo}"
+        return f"[{self.data_referencia}] {self.fundo.nome} | {conta} | Saldo: R$ {saldo}"
 
 
 # =================================================

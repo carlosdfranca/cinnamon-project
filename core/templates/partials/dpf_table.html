@@ -1,0 +1,130 @@
+{% load custom_tags %}
+
+<table class="table table-bordered table-sm mt-2">
+  <thead class="table-light">
+    <tr>
+      <th style="width: 60%">Descrição</th>
+      <th style="width: 10%" class="text-end">{{ data_atual|date:"d/m/Y" }}</th>
+      <th style="width: 10%" class="text-end">% PL {{ data_atual|date:"Y" }}</th>
+      <th style="width: 10%" class="text-end">{{ data_anterior|date:"d/m/Y" }}</th>
+      <th style="width: 10%" class="text-end">% PL {{ data_anterior|date:"Y" }}</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    {# ====== ATIVO ====== #}
+    {% with secao=dpf_tabela.ATIVO %}
+      {% for grupo_label, bloco in secao.items %}
+        {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
+          <tr class="table-secondary fw-bold">
+            <td colspan="1">{{ grupo_label }}</td>
+            <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+          </tr>
+
+          {% for subgrupo, valores in bloco.items %}
+            {% if subgrupo != "SOMA" and subgrupo != "SOMA_ANTERIOR" and subgrupo != "PERC_ATUAL" and subgrupo != "PERC_ANTERIOR" %}
+              <tr>
+                <td>{{ subgrupo }}</td>
+                <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+
+          <tr class="border-top">
+            <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+
+      <!-- TOTAL ATIVO -->
+      <tr class="table-secondary fw-bold">
+        <td>TOTAL ATIVO</td>
+        <td class="text-end">{{ secao.TOTAL_ATIVO.ATUAL|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_ATIVO.ANTERIOR|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_ATIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+      </tr>
+    {% endwith %}
+
+    <!-- Separador entre seções -->
+    <tr class="border-top">
+      <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    {# ====== PASSIVO ====== #}
+    {% with secao=dpf_tabela.PASSIVO %}
+      {% for grupo_label, bloco in secao.items %}
+        {% if grupo_label|slice:":6" != "TOTAL_" and grupo_label|slice:":5" != "PERC_" %}
+          <tr class="table-secondary fw-bold">
+            <td colspan="1">{{ grupo_label }}</td>
+            <td class="text-end">{{ bloco.SOMA|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.PERC_ATUAL|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.SOMA_ANTERIOR|default:0|formata_milhar }}</td>
+            <td class="text-end">{{ bloco.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+          </tr>
+
+          {% for subgrupo, valores in bloco.items %}
+            {% if subgrupo != "SOMA" and subgrupo != "SOMA_ANTERIOR" and subgrupo != "PERC_ATUAL" and subgrupo != "PERC_ANTERIOR" %}
+              <tr>
+                <td>{{ subgrupo }}</td>
+                <td class="text-end">{{ valores.ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.PERC_ATUAL|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.ANTERIOR|default:0|formata_milhar }}</td>
+                <td class="text-end">{{ valores.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+
+          <tr class="border-top">
+            <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+
+      <!-- TOTAL PASSIVO -->
+      <tr class="table-secondary fw-bold">
+        <td>TOTAL PASSIVO</td>
+        <td class="text-end">{{ secao.TOTAL_PASSIVO.ATUAL|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ATUAL|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_PASSIVO.ANTERIOR|default:0|formata_milhar }}</td>
+        <td class="text-end">{{ secao.TOTAL_PASSIVO.PERC_ANTERIOR|default:0|formata_milhar }}</td>
+      </tr>
+    {% endwith %}
+
+    <!-- Separador entre seções -->
+    <tr class="border-top">
+      <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- PL -->
+    <tr class="table-secondary fw-bold">
+      <td>Patrimônio líquido</td>
+      <td class="text-end">{{ pl_ajustado_atual|formata_milhar }}</td>
+      <td class="text-end">-</td>
+      <td class="text-end">{{ pl_ajustado_anterior|formata_milhar }}</td>
+      <td class="text-end">-</td>
+    </tr>
+
+    <!-- Separador entre seções -->
+    <tr class="border-top">
+      <td colspan="5" style="background-color: #F7F3E3; border-left: none; border-right: none;"></td>
+    </tr>
+
+    <!-- PL + PASSIVO -->
+    <tr class="table-secondary fw-bold">
+      <td>Total do patrimônio líquido e do passivo</td>
+      <td class="text-end">{{ total_pl_passivo_atual|formata_milhar }}</td>
+      <td class="text-end">{{ perc_total_pl_passivo_atual|formata_milhar }}</td>
+      <td class="text-end">{{ total_pl_passivo_anterior|formata_milhar }}</td>
+      <td class="text-end">{{ perc_total_pl_passivo_anterior|formata_milhar }}</td>
+    </tr>
+
+  </tbody>
+</table>
+  

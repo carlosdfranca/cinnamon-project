@@ -189,7 +189,7 @@ def parse_excel(file_obj) -> List[BalanceteRowDTO]:
             # ignora linhas sem conta
             continue
         saldo_atual = _to_float(row.get(SALDO_ATUAL))
-        saldo_anterior = _to_float(row.get(SALDO_ANTERIOR))
+        saldo_anterior = None
         rows.append(
             BalanceteRowDTO(
                 conta=conta,
