@@ -28,19 +28,9 @@
       </div>
 
       <div class="col-md-3 text-end">
-        {% if data_anterior == 'ZERADO' %}
-          {% with 'ZERADO' as data_anterior_url %}
-            <a href="{% url 'exportar_dfs_excel' fundo.id data_atual|date:'Y-m-d' data_anterior_url %}" class="btn btn-success">
-              Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i>
-            </a>
-          {% endwith %}
-        {% else %}
-          {% with data_anterior|date:'Y-m-d' as data_anterior_url %}
-            <a href="{% url 'exportar_dfs_excel' fundo.id data_atual|date:'Y-m-d' data_anterior_url %}" class="btn btn-success">
-              Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i>
-            </a>
-          {% endwith %}
-        {% endif %}
+        <a href="{% url 'exportar_dfs_excel' fundo.id data_atual_str data_anterior_str %}" class="btn btn-success">
+          Baixar Demonstração Financeira <i class="bi bi-file-earmark-excel-fill ms-2"></i>
+        </a>
       </div>
     </div>
 

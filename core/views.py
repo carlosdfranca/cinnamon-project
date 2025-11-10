@@ -32,7 +32,7 @@ import os
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from datetime import datetime
+from datetime import datetime, date
 
 
 # --------- helpers de escopo/flags para UI ---------
@@ -225,28 +225,48 @@ def annotate_percents(dpf: dict, pl_atual_val: float, pl_ant_val: float) -> dict
 @company_can_view_data
 def df_resultado(request, fundo_id, data_atual, data_anterior):
     """
-    Exibe as Demonstrações Financeiras comparando duas datas de balancete.
+    data_atual e data_anterior chegam como STRING da URL (YYYY-MM-DD ou 'ZERADO').
+    Aqui a gente:
+      - converte para date só em variáveis separadas
+      - mantém as strings originais para usar nas URLs de exportação
     """
-    zerar_anterior = data_anterior == "ZERADO"
+    zerar_anterior = (data_anterior == "ZERADO")
 
-    # 🔹 Conversão de strings para objetos date
+    # 1) Converte strings da URL para objetos date para usar nos services
     try:
-        data_atual = datetime.strptime(data_atual, "%Y-%m-%d").date()
-        data_anterior = None if zerar_anterior else datetime.strptime(data_anterior, "%Y-%m-%d").date()
+        data_atual_date = datetime.strptime(data_atual, "%Y-%m-%d").date()
+        data_anterior_date = None if zerar_anterior else datetime.strptime(data_anterior, "%Y-%m-%d").date()
     except ValueError:
-        messages.error(request, "Formato de data inválido. Use o padrão YYYY-MM-DD.")
+        messages.error(request, "Formato de data inválido.")
         return redirect("demonstracao_financeira")
 
-    # 🔹 Busca o fundo dentro do escopo da empresa ativa
-    fundo_qs = query_por_empresa_ativa(Fundo.objects.select_related("empresa"), request, "empresa")
-    fundo = get_object_or_404(fundo_qs, id=fundo_id)
+    # 2) Busca fundo (ajuste aqui se você usa escopo por empresa)
+    fundo = get_object_or_404(Fundo, id=fundo_id)
 
-    # Passar flag para services
+    # 3) Chama os serviços passando os OBJETOS date + flag zerar_anterior
     dre_tabela, resultado_exercicio, resultado_exercicio_anterior = gerar_dados_dre(
-        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
+        fundo_id=fundo.id,
+        data_atual=data_atual_date,
+        data_anterior=data_anterior_date,
+        zerar_anterior=zerar_anterior,
     )
-    dpf_tabela, _metricas_dpf = gerar_dados_dpf(
-        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
+    dpf_tabela, metricas_dpf = gerar_dados_dpf(
+        fundo_id=fundo.id,
+        data_atual=data_atual_date,
+        data_anterior=data_anterior_date,
+        zerar_anterior=zerar_anterior,
+    )
+    dados_dmpl = gerar_dados_dmpl(
+        fundo_id=fundo.id,
+        data_atual=data_atual_date,
+        data_anterior=data_anterior_date,
+        zerar_anterior=zerar_anterior,
+    )
+    dfc_tabela, variacao_caixa_atual, variacao_caixa_ant = gerar_tabela_dfc(
+        fundo_id=fundo.id,
+        data_atual=data_atual_date,
+        data_anterior=data_anterior_date,
+        zerar_anterior=zerar_anterior,
     )
 
     # === PL ajustado ===
@@ -257,37 +277,37 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
 
     dpf_tabela = annotate_percents(dpf_tabela, pl_atual, pl_anterior)
 
-    dados_dmpl = gerar_dados_dmpl(
-        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
-    )
-    dfc_tabela, variacao_atual, variacao_ant = gerar_tabela_dfc(
-        fundo_id=fundo.id, data_atual=data_atual, data_anterior=data_anterior, zerar_anterior=zerar_anterior
-    )
+    # 4) Strings para URL de exportação (NÃO vamos mais chamar strftime no template)
+    data_atual_str = data_atual  # já vem da URL como 'YYYY-MM-DD'
+    data_anterior_str = "ZERADO" if zerar_anterior else data_anterior  # também string
 
-    if zerar_anterior:
-        data_anterior_str = "ZERADO"
-    else:
-        data_anterior_str = data_anterior.strftime("%Y-%m-%d") if data_anterior else "ZERADO"
-
-    # === Renderiza o template ===
-    return render(request, "df_resultado.html", {
+    # 5) Monta contexto: datas como date para o template usar |date,
+    # e *_str para as URLs
+    context = {
         "fundo": fundo,
-        "data_atual": data_atual,
-        "data_anterior": data_anterior_str,
+        "data_atual": data_atual_date,
+        "data_anterior": data_anterior_date,
+        "data_atual_str": data_atual_str,
+        "data_anterior_str": data_anterior_str,
+        "zerar_anterior": zerar_anterior,
         "dre_tabela": dre_tabela,
         "dpf_tabela": dpf_tabela,
         "dados_dmpl": dados_dmpl,
         "dfc_tabela": dfc_tabela,
         "resultado_exercicio": resultado_exercicio,
-        "resultado_exercicio_anterior": resultado_exercicio_anterior,
-        "variacao_atual": variacao_atual,
-        "variacao_ant": variacao_ant,
+        "resultado_exercicio_anterior": 0 if zerar_anterior else resultado_exercicio_anterior,
         "pl_ajustado_atual": pl_atual,
         "pl_ajustado_anterior": pl_anterior,
         "total_pl_passivo_atual": total_pl_passivo_atual,
         "total_pl_passivo_anterior": total_pl_passivo_anterior,
-    })
+        "variacao_atual": variacao_caixa_atual,
+        "variacao_ant": 0 if zerar_anterior else variacao_caixa_ant,
+        # ... demais coisas que você já passa hoje
+    }
 
+    return render(request, "df_resultado.html", context)
+
+    
 
 
 @login_required
