@@ -114,3 +114,35 @@ def company_can_manage_fundos(view):
             return view(request, *args, **kwargs)
         return HttpResponseForbidden("Você não tem permissão para gerenciar fundos desta empresa.")
     return _wrapped
+
+
+def company_can_download_data(view):
+    """
+    Pode FAZER DOWNLOAD de dados da empresa:
+    - Global (admin/viewer) COM empresa ativa
+    - Usuário com membership ativo na empresa
+    ❌ Nunca redireciona
+    """
+    @wraps(view)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden("Usuário não autenticado.")
+
+        empresa = get_empresa_escopo(request)
+
+        if not empresa:
+            return HttpResponseForbidden(
+                "Nenhuma empresa selecionada para download."
+            )
+
+        if is_global(request.user):
+            return view(request, *args, **kwargs)
+
+        if role_na_empresa(request.user, empresa) is not None:
+            return view(request, *args, **kwargs)
+
+        return HttpResponseForbidden(
+            "Você não tem permissão para baixar os dados desta empresa."
+        )
+
+    return _wrapped

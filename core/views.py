@@ -1,4 +1,3 @@
-# views.py
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,6 +13,7 @@ from usuarios.permissions import (
     get_empresa_escopo,
     role_na_empresa,
     is_global_admin,
+    company_can_download_data
 )
 
 from .forms import FundoForm
@@ -311,7 +311,7 @@ def df_resultado(request, fundo_id, data_atual, data_anterior):
 
 
 @login_required
-@company_can_view_data
+@company_can_download_data
 def exportar_dfs_excel(request, fundo_id, data_atual, data_anterior):
     """
     Exporta todas as Demonstrações Financeiras (DPF, DRE, DMPL e DFC)
