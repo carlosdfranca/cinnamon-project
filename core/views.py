@@ -406,9 +406,14 @@ def exportar_dfs_excel(request, fundo_id, data_atual, data_anterior):
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     nome_curto = "_".join(str(fundo.nome).replace("-", "").split())
-    response["Content-Disposition"] = (
-        f"attachment; filename=DFs_{data_atual.strftime('%Y%m%d')}_{data_anterior.strftime('%Y%m%d')}_{nome_curto}.xlsx"
-    )
+    if data_anterior:
+        response["Content-Disposition"] = (
+            f"attachment; filename=DFs_{data_atual.strftime('%Y%m%d')}_{data_anterior.strftime('%Y%m%d')}_{nome_curto}.xlsx"
+        )
+    else:
+        response["Content-Disposition"] = (
+            f"attachment; filename=DFs_{data_atual.strftime('%Y%m%d')}_{nome_curto}.xlsx"
+        )
 
     wb.save(response)
     return response

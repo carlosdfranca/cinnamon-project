@@ -14,6 +14,11 @@ underline_double = Border(bottom=Side(style="double"))
 double_bottom_border = Border(bottom=Side(style="double"))
 
 
+def data_str(data, default="—"):
+    if not data:
+        return default
+    return data.strftime("%d/%m/%Y")
+
 # ================================================================
 # Função auxiliar para rodapé padronizado
 # ================================================================
@@ -82,7 +87,7 @@ def criar_aba_dpf(
 
     ws.append([])
     ws["A6"] = "Demonstração da Posição Financeira"; ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"; ws["A7"].alignment = left
+    ws["A7"] = f"Em {data_atual.strftime('%d/%m/%Y')} e {data_str(data_anterior)}"; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais, exceto quando apresentado de outra forma)"
     ws["A8"].font = italic; ws["A8"].alignment = left
     ws.append([])
@@ -130,7 +135,7 @@ def criar_aba_dpf(
     ws.merge_cells(start_row=row0, start_column=COL["Q_CUR"], end_row=row0, end_column=COL["P_CUR"])
 
     ws.cell(row=row0, column=COL["Q_PRI"],
-            value=data_anterior.strftime("%d/%m/%Y")).font = bold
+            value=data_str(data_anterior)).font = bold
     ws.cell(row=row0, column=COL["Q_PRI"]).alignment = center
     ws.merge_cells(start_row=row0, start_column=COL["Q_PRI"], end_row=row0, end_column=COL["P_PRI"])
 
@@ -309,7 +314,7 @@ def criar_aba_dre(wb, fundo, data_atual, data_anterior, dre_tabela, resultado_ex
 
     ws["A6"] = "Demonstração do Resultado do Exercício"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_str(data_anterior)}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais)"
     ws["A8"].font = italic; ws["A8"].alignment = left
@@ -317,7 +322,7 @@ def criar_aba_dre(wb, fundo, data_atual, data_anterior, dre_tabela, resultado_ex
 
     # Cabeçalho das colunas
     ws.insert_cols(3)
-    ws.append(["", data_atual.strftime("%d/%m/%Y"), "", data_anterior.strftime("%d/%m/%Y")])
+    ws.append(["", data_atual.strftime("%d/%m/%Y"), "", data_str(data_anterior)])
     row_header = ws.max_row
     for col in (2, 4):
         c = ws.cell(row=row_header, column=col)
@@ -396,7 +401,7 @@ def criar_aba_dmpl(
 
     ws["A6"] = "Demonstração das Mutações do Patrimônio Líquido"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_str(data_anterior)}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais, exceto o valor unitário da cota)"
     ws["A8"].font = italic; ws["A8"].alignment = left
@@ -405,7 +410,7 @@ def criar_aba_dmpl(
     # =====================
     # Cabeçalho colunas
     # =====================
-    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_anterior.strftime("%d/%m/%Y")])
+    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_str(data_anterior)])
     row_header = ws.max_row
     for col in (2, 3):
         c = ws.cell(row=row_header, column=col)
@@ -498,7 +503,7 @@ def criar_aba_dfc(wb, fundo, data_atual, data_anterior, dfc_tabela, variacao_atu
 
     ws["A6"] = "Demonstração dos Fluxos de Caixa – Método indireto"
     ws["A6"].font = bold; ws["A6"].alignment = left
-    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_anterior.strftime('%d/%m/%Y')}"
+    ws["A7"] = f"Períodos findos em {data_atual.strftime('%d/%m/%Y')} e {data_str(data_anterior)}"
     ws["A7"].font = bold; ws["A7"].alignment = left
     ws["A8"] = "(Valores expressos em milhares de reais)"
     ws["A8"].font = italic; ws["A8"].alignment = left
@@ -507,7 +512,7 @@ def criar_aba_dfc(wb, fundo, data_atual, data_anterior, dfc_tabela, variacao_atu
     # =====================
     # Cabeçalho colunas
     # =====================
-    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_anterior.strftime("%d/%m/%Y")])
+    ws.append(["Descrição", data_atual.strftime("%d/%m/%Y"), data_str(data_anterior)])
     row_header = ws.max_row
     for col in (2, 3):
         c = ws.cell(row=row_header, column=col)
