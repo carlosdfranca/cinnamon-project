@@ -27,6 +27,8 @@ A geração é feita via **docxtpl** (sintaxe Jinja2).
 | `{{empresa_cnpj}}` | CNPJ da empresa administradora | `98.765.432/0001-11` |
 | `{{data_atual}}` | Data atual formatada | `31/12/2024` |
 | `{{data_anterior}}` | Data anterior formatada (ou `—` se zerado) | `31/12/2023` |
+| `{{data_atual_extenso}}` | Data atual por extenso | `31 de dezembro de 2024` |
+| `{{data_anterior_extenso}}` | Data anterior por extenso (ou `—` se zerado) | `31 de dezembro de 2023` |
 
 ---
 
@@ -234,7 +236,7 @@ Não há loops. Todas as variáveis são escalares.
 ### Escalares
 ```
 {{fundo_nome}}  {{fundo_cnpj}}  {{empresa_nome}}  {{empresa_cnpj}}
-{{data_atual}}  {{data_anterior}}
+{{data_atual}}  {{data_anterior}}  {{data_atual_extenso}}  {{data_anterior_extenso}}
 {{resultado_exercicio}}  {{resultado_exercicio_anterior}}
 {{pl_ajustado_atual}}  {{pl_ajustado_anterior}}
 {{total_pl_passivo_atual}}  {{total_pl_passivo_anterior}}

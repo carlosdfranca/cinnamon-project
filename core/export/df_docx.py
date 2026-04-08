@@ -41,6 +41,19 @@ def _data_str(data, default="—"):
     return data.strftime("%d/%m/%Y")
 
 
+_MESES_PT = (
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+)
+
+
+def _data_extenso(data, default="—"):
+    """Retorna a data por extenso, ex: '31 de dezembro de 2024'."""
+    if not data:
+        return default
+    return f"{data.day} de {_MESES_PT[data.month - 1]} de {data.year}"
+
+
 # ================================================================
 # Construtores de listas de linhas
 # ================================================================
@@ -191,6 +204,8 @@ def build_docx_context(
         "empresa_cnpj": fundo.empresa.cnpj or "",
         "data_atual": _data_str(data_atual),
         "data_anterior": _data_str(data_anterior),
+        "data_atual_extenso": _data_extenso(data_atual),
+        "data_anterior_extenso": _data_extenso(data_anterior),
 
         # ── DPF — loops ────────────────────────────────────────
         "ativo_rows": _build_ativo_rows(dpf_tabela, pl_ajustado_atual, pl_ajustado_anterior),
