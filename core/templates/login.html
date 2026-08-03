@@ -36,9 +36,6 @@
       <img src="{% static 'img/logo-dark.png' %}" alt="Cinnamon" class="login-form-logo site-nav__logo--dark">
       <img src="{% static 'img/logo-white.png' %}" alt="Cinnamon" class="login-form-logo site-nav__logo--light">
 
-      <h2 class="login-form-title">Bem-vindo de volta</h2>
-      <p class="login-form-subtitle">Acesse sua conta para continuar</p>
-
       <form method="POST" action="{% url 'login' %}">
         {% csrf_token %}
         <div class="mb-3">
