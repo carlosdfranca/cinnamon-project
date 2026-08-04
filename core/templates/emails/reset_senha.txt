@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════════════════════════
+                            🎯 FSBuilder
+═══════════════════════════════════════════════════════════════════════════
+
+REDEFINIÇÃO DE SENHA
+
+Olá, {{ usuario.get_full_name|default:usuario.username }},
+
+Recebemos uma solicitação para redefinir a senha da sua conta no FSBuilder.
+Acesse o link abaixo para criar uma nova senha:
+
+{{ link_reset }}
+
+───────────────────────────────────────────────────────────────────────────
+⏱️ ATENÇÃO - PRAZO DE VALIDADE
+───────────────────────────────────────────────────────────────────────────
+
+Este link expira em: {{ expira_em|date:"d/m/Y às H:i" }}
+({{ horas_validade }} horas a partir do envio)
+
+───────────────────────────────────────────────────────────────────────────
+
+Se você não solicitou a redefinição de senha, ignore este email com
+segurança. Sua senha atual continuará funcionando normalmente e nenhuma
+alteração será feita na sua conta.
+
+═══════════════════════════════════════════════════════════════════════════
+© {{ "now"|date:"Y" }} FSBuilder. Todos os direitos reservados.
+═══════════════════════════════════════════════════════════════════════════

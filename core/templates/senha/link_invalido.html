@@ -1,0 +1,54 @@
+{% extends 'base/base.html' %}
+
+{% load static %}
+
+{% block title %}Link inválido{% endblock %}
+
+{% block conteudo %}
+<div class="login-page">
+
+  <!-- Painel esquerdo: branding -->
+  <div class="login-panel login-panel--brand">
+    <div class="login-brand-content">
+      <img src="{% static 'img/logo-white.png' %}" alt="Cinnamon" class="login-brand-logo">
+      <p class="login-brand-tagline">Gestão inteligente de<br>fundos de investimento</p>
+      <ul class="login-brand-features">
+        <li>
+          <i class="bi bi-bar-chart-line"></i>
+          <span>Demonstrações financeiras automatizadas</span>
+        </li>
+        <li>
+          <i class="bi bi-shield-check"></i>
+          <span>Controle de acesso por perfil</span>
+        </li>
+        <li>
+          <i class="bi bi-file-earmark-text"></i>
+          <span>Relatórios e exportações em tempo real</span>
+        </li>
+      </ul>
+    </div>
+    <p class="login-brand-copy">&copy; {{ "now"|date:"Y" }} Cinnamon. Todos os direitos reservados.</p>
+  </div>
+
+  <!-- Painel direito: erro -->
+  <div class="login-panel login-panel--form">
+    <div class="login-form-wrapper text-center">
+      <img src="{% static 'img/logo-dark.png' %}" alt="Cinnamon" class="login-form-logo site-nav__logo--dark">
+      <img src="{% static 'img/logo-white.png' %}" alt="Cinnamon" class="login-form-logo site-nav__logo--light">
+
+      <div class="mb-3">
+        <i class="bi bi-exclamation-triangle" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
+      </div>
+
+      <h1 class="login-form-title">Link inválido ou expirado</h1>
+      <p class="login-form-subtitle">{{ erro }}</p>
+
+      <a href="{% url 'esqueci_senha' %}" class="btn btn-primary w-100 login-btn">Solicitar novo link</a>
+      <a href="{% url 'login' %}" class="login-forgot-link">
+        <i class="bi bi-arrow-left me-1"></i>Voltar para o login
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

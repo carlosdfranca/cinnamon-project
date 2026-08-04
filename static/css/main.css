@@ -649,6 +649,18 @@ label {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
+.login-forgot-link {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+.login-forgot-link:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
+}
 
 /* ── Responsivo: mobile oculta branding ── */
 @media (max-width: 768px) {

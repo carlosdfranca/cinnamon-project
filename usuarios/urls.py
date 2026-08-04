@@ -14,6 +14,10 @@ from usuarios.views_convite import (
     cancelar_convite,
     aceitar_convite,
 )
+from usuarios.views_password_reset import (
+    esqueci_senha,
+    redefinir_senha,
+)
 
 urlpatterns = [
     # Gestão de usuários
@@ -31,6 +35,10 @@ urlpatterns = [
     
     # Aceitar convite (público - sem empresa/ no path)
     path("convites/aceitar/<uuid:token>/", aceitar_convite, name="aceitar_convite"),
+
+    # Esqueci minha senha (público)
+    path("senha/esqueci/", esqueci_senha, name="esqueci_senha"),
+    path("senha/redefinir/<uuid:token>/", redefinir_senha, name="redefinir_senha"),
 
     # Seleção de empresa
     path("selecionar-empresa/", selecionar_empresa, name="selecionar_empresa"),

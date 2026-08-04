@@ -156,6 +156,61 @@ class AceitarConviteForm(forms.Form):
                 validate_password(password1)
             except ValidationError as e:
                 raise ValidationError(e.messages)
-        
+
+        return password2
+
+
+class SolicitarResetSenhaForm(forms.Form):
+    """
+    Form para o usuário informar o email e solicitar a redefinição de senha.
+    """
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite seu email cadastrado',
+            'autocomplete': 'email',
+            'autofocus': True,
+        })
+    )
+
+
+class RedefinirSenhaForm(forms.Form):
+    """
+    Form para o usuário definir uma nova senha a partir do link de redefinição.
+    """
+    password1 = forms.CharField(
+        label="Nova senha",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••',
+            'autocomplete': 'new-password'
+        }),
+        help_text="Mínimo 8 caracteres. Não pode ser muito comum ou totalmente numérica."
+    )
+
+    password2 = forms.CharField(
+        label="Confirmar nova senha",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    def clean_password2(self):
+        """Valida se as senhas coincidem e atendem aos requisitos de força."""
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+
+        if password1 and password2:
+            if password1 != password2:
+                raise ValidationError("As senhas não coincidem.")
+
+            try:
+                validate_password(password1)
+            except ValidationError as e:
+                raise ValidationError(e.messages)
+
         return password2
 

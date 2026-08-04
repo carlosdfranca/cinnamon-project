@@ -206,6 +206,12 @@ DF_NOTIFICACAO_SINCRONO = config('DF_NOTIFICACAO_SINCRONO', default=False, cast=
 # Base URL do site (usado em links de email)
 BASE_URL = config('BASE_URL', default='http://localhost:8000')
 
+# ===== PASSWORD RESET CONFIGURATION =====
+PASSWORD_RESET_EXPIRACAO_HORAS = config('PASSWORD_RESET_EXPIRACAO_HORAS', default=24, cast=int)
+PASSWORD_RESET_ENVIO_SINCRONO = config(
+    'PASSWORD_RESET_ENVIO_SINCRONO', default=CONVITE_ENVIO_SINCRONO, cast=bool
+)  # Para dev/tests
+
 # ===== CELERY BEAT SCHEDULE =====
 # Configuração de tasks periódicas
 from celery.schedules import crontab

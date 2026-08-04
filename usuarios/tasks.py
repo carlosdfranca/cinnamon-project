@@ -374,3 +374,202 @@ def enviar_notificacao_convite_aceito(convite_id: int):
     except Exception as exc:
         logger.error(f"Erro ao enviar notificação de aceite: {str(exc)}")
         return {'success': False, 'reason': str(exc)}
+
+
+# ===== Redefinição de Senha =====
+
+@shared_task(
+    bind=True,
+    max_retries=3,
+    default_retry_delay=300,  # 5 minutos
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True
+)
+def enviar_email_reset_senha_async(self, reset_token_id: int):
+    """
+    Envia email de redefinição de senha de forma assíncrona.
+
+    Retry automático:
+    - 3 tentativas máximas
+    - Intervalo inicial de 5 minutos
+    - Backoff exponencial com jitter
+
+    Args:
+        reset_token_id: ID do PasswordResetToken
+
+    Returns:
+        dict: Resultado do envio (sucesso, tentativas, etc)
+    """
+    from usuarios.models import PasswordResetToken
+    from usuarios.email_service import send_email, EmailBackendError
+
+    try:
+        reset_token = PasswordResetToken.objects.select_related('usuario').get(id=reset_token_id)
+
+        # Valida se token ainda está pendente
+        if reset_token.status != PasswordResetToken.Status.PENDING:
+            logger.info(
+                f"Token de redefinição {reset_token_id} não está pendente "
+                f"(status: {reset_token.status}). Email não enviado."
+            )
+            return {
+                'success': False,
+                'reason': 'status_invalido',
+                'status': reset_token.status
+            }
+
+        # Valida se não expirou
+        if timezone.now() > reset_token.expira_em:
+            logger.info(f"Token de redefinição {reset_token_id} já expirou. Email não enviado.")
+            return {
+                'success': False,
+                'reason': 'expirado'
+            }
+
+        base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        link_reset = reset_token.get_link(base_url)
+        horas_validade = getattr(settings, 'PASSWORD_RESET_EXPIRACAO_HORAS', 24)
+
+        context = {
+            'usuario': reset_token.usuario,
+            'link_reset': link_reset,
+            'base_url': base_url,
+            'horas_validade': horas_validade,
+            'expira_em': reset_token.expira_em,
+        }
+
+        html_message = render_to_string('emails/reset_senha.html', context)
+        text_message = render_to_string('emails/reset_senha.txt', context)
+
+        subject = "Redefinição de senha - FSBuilder"
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fsbuilder.com')
+        recipient_email = reset_token.usuario.email
+
+        send_email(
+            to_email=recipient_email,
+            subject=subject,
+            html_content=html_message,
+            text_content=text_message,
+            from_email=from_email
+        )
+
+        logger.info(
+            f"Email de redefinição de senha enviado com sucesso: Token {reset_token_id} | "
+            f"Usuário: {reset_token.usuario.username} | Tentativa: {self.request.retries + 1}"
+        )
+
+        return {
+            'success': True,
+            'reset_token_id': reset_token_id,
+            'email': recipient_email,
+            'tentativas': self.request.retries + 1
+        }
+
+    except PasswordResetToken.DoesNotExist:
+        logger.error(f"Token de redefinição {reset_token_id} não encontrado")
+        return {
+            'success': False,
+            'reason': 'token_nao_existe'
+        }
+    except EmailBackendError as e:
+        logger.error(f"Erro no backend de email: {e}")
+        raise
+    except Exception as exc:
+        logger.error(
+            f"Erro ao enviar email de redefinição de senha {reset_token_id}: {str(exc)} | "
+            f"Tentativa {self.request.retries + 1}/{self.max_retries}"
+        )
+        raise
+
+
+def enviar_email_reset_senha_sync(reset_token_id: int):
+    """
+    Versão síncrona do envio de email de redefinição de senha (para desenvolvimento/testes).
+
+    Args:
+        reset_token_id: ID do PasswordResetToken
+
+    Returns:
+        dict: Resultado do envio
+    """
+    from usuarios.models import PasswordResetToken
+    from usuarios.email_service import send_email, EmailBackendError
+
+    try:
+        reset_token = PasswordResetToken.objects.select_related('usuario').get(id=reset_token_id)
+
+        if reset_token.status != PasswordResetToken.Status.PENDING:
+            logger.info(
+                f"Token de redefinição {reset_token_id} não está pendente "
+                f"(status: {reset_token.status}). Email não enviado."
+            )
+            return {
+                'success': False,
+                'reason': 'status_invalido',
+                'status': reset_token.status
+            }
+
+        if timezone.now() > reset_token.expira_em:
+            logger.info(f"Token de redefinição {reset_token_id} já expirou. Email não enviado.")
+            return {
+                'success': False,
+                'reason': 'expirado'
+            }
+
+        base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        link_reset = reset_token.get_link(base_url)
+        horas_validade = getattr(settings, 'PASSWORD_RESET_EXPIRACAO_HORAS', 24)
+
+        context = {
+            'usuario': reset_token.usuario,
+            'link_reset': link_reset,
+            'base_url': base_url,
+            'horas_validade': horas_validade,
+            'expira_em': reset_token.expira_em,
+        }
+
+        html_content = render_to_string('emails/reset_senha.html', context)
+        text_content = render_to_string('emails/reset_senha.txt', context)
+
+        subject = "Redefinição de senha - FSBuilder"
+        from_email = settings.DEFAULT_FROM_EMAIL
+        to_email = reset_token.usuario.email
+
+        send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            from_email=from_email
+        )
+
+        logger.info(f"Email de redefinição de senha enviado com sucesso (SYNC): Token {reset_token_id}")
+
+        return {
+            'success': True,
+            'reset_token_id': reset_token_id,
+            'email': to_email,
+            'tentativas': 1
+        }
+
+    except PasswordResetToken.DoesNotExist:
+        logger.error(f"Token de redefinição {reset_token_id} não encontrado")
+        return {
+            'success': False,
+            'reason': 'token_nao_existe'
+        }
+    except EmailBackendError as e:
+        logger.exception(f"Erro no backend de email: {e}")
+        return {
+            'success': False,
+            'reason': 'erro_envio',
+            'error': str(e)
+        }
+    except Exception as e:
+        logger.exception(f"Erro ao enviar email de redefinição de senha (SYNC): {e}")
+        return {
+            'success': False,
+            'reason': 'erro_envio',
+            'error': str(e)
+        }

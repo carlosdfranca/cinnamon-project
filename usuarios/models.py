@@ -427,7 +427,7 @@ class Convite(models.Model):
     def pode_reenviar(self) -> bool:
         """
         Verifica se o convite pode ser reenviado.
-        
+
         Returns:
             bool: True se status é PENDING ou EXPIRED e não excedeu limite de reenvios
         """
@@ -437,3 +437,145 @@ class Convite(models.Model):
             self.status in {self.Status.PENDING, self.Status.EXPIRED}
             and self.tentativas_envio < max_reenvios
         )
+
+
+# ===== Redefinição de Senha =====
+class PasswordResetToken(models.Model):
+    """
+    Representa uma solicitação de redefinição de senha ("esqueci minha senha").
+
+    Fluxo:
+    1. Usuário informa o email na página "Esqueci minha senha"
+    2. Sistema cria um token e envia email com link único
+    3. Usuário clica no link e define uma nova senha
+    4. Sistema atualiza a senha do usuário e marca o token como USED
+
+    Estados:
+    - PENDING: Aguardando uso do link
+    - USED: Link já foi utilizado para redefinir a senha
+    - CANCELLED: Invalidado (ex: substituído por uma nova solicitação)
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", _("Pendente")
+        USED = "USED", _("Utilizado")
+        CANCELLED = "CANCELLED", _("Cancelado")
+
+    # ===== Relação =====
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="reset_tokens",
+        verbose_name=_("Usuário"),
+        help_text=_("Usuário que solicitou a redefinição de senha")
+    )
+
+    # ===== Token e Segurança =====
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        db_index=True,
+        verbose_name=_("Token"),
+        help_text=_("Token único para validação da redefinição (UUID4)")
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name=_("Status"),
+        help_text=_("Estado atual da solicitação")
+    )
+
+    # ===== Timestamps =====
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Criado em"),
+        help_text=_("Data e hora de criação do token")
+    )
+
+    expira_em = models.DateTimeField(
+        verbose_name=_("Expira em"),
+        help_text=_("Data e hora de expiração do token")
+    )
+
+    usado_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Usado em"),
+        help_text=_("Data e hora em que o token foi utilizado")
+    )
+
+    # ===== Audit =====
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name=_("IP"),
+        help_text=_("Endereço IP de quem solicitou a redefinição")
+    )
+
+    user_agent = models.TextField(
+        blank=True,
+        verbose_name=_("User Agent"),
+        help_text=_("Browser/device de quem solicitou a redefinição")
+    )
+
+    class Meta:
+        verbose_name = _("Token de Redefinição de Senha")
+        verbose_name_plural = _("Tokens de Redefinição de Senha")
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["usuario", "status"], name="idx_pwdreset_usuario_status"),
+            models.Index(fields=["token"], name="idx_pwdreset_token"),
+            models.Index(fields=["status", "expira_em"], name="idx_pwdreset_status_expira"),
+        ]
+
+    def __str__(self):
+        return f"Redefinição de senha para {self.usuario.username} ({self.get_status_display()})"
+
+    def save(self, *args, **kwargs):
+        """
+        Ao criar um novo token, define automaticamente a data de expiração.
+        """
+        if not self.pk and not self.expira_em:
+            from django.conf import settings
+            horas = getattr(settings, 'PASSWORD_RESET_EXPIRACAO_HORAS', 24)
+            self.expira_em = timezone.now() + timedelta(hours=horas)
+        super().save(*args, **kwargs)
+
+    def is_valido(self) -> bool:
+        """
+        Verifica se o token está válido para ser usado.
+
+        Returns:
+            bool: True se status é PENDING, não expirou e o usuário está ativo
+        """
+        return (
+            self.status == self.Status.PENDING
+            and timezone.now() <= self.expira_em
+            and self.usuario.is_active
+        )
+
+    def marcar_usado(self):
+        """Marca o token como utilizado."""
+        self.status = self.Status.USED
+        self.usado_em = timezone.now()
+        self.save(update_fields=["status", "usado_em"])
+
+    def get_link(self, base_url: str = None) -> str:
+        """
+        Gera o link completo para redefinir a senha.
+
+        Args:
+            base_url: URL base do site (ex: https://fsbuilder.com)
+                     Se não fornecido, retorna apenas o path relativo
+
+        Returns:
+            str: URL completa ou path relativo para redefinir a senha
+        """
+        path = f"/senha/redefinir/{self.token}/"
+        if base_url:
+            return f"{base_url.rstrip('/')}{path}"
+        return path
