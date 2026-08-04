@@ -70,6 +70,10 @@ class Empresa(models.Model):
 
     # Campos operacionais úteis
     is_ativo = models.BooleanField(default=True)
+    max_fundos = models.PositiveIntegerField(
+        default=10,
+        help_text="Número máximo de fundos que esta empresa pode cadastrar."
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
@@ -122,6 +126,13 @@ class Empresa(models.Model):
             memberships__empresa=self,
             memberships__is_active=True
         )
+
+    # ---- Limite de fundos ----
+    def total_fundos(self) -> int:
+        return self.fundos.count()
+
+    def pode_adicionar_fundo(self) -> bool:
+        return self.total_fundos() < self.max_fundos
 
 
 class Membership(models.Model):

@@ -36,7 +36,8 @@ class UsuarioAdmin(UserAdmin):
 # ----- Empresa -----
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
-    list_display = ("nome", "cnpj", "master", "is_ativo", "criado_em")
+    list_display = ("nome", "cnpj", "master", "max_fundos", "is_ativo", "criado_em")
+    list_editable = ("max_fundos",)
     search_fields = ("nome", "cnpj", "master__username", "master__first_name", "master__last_name")
     list_filter = ("is_ativo",)
     autocomplete_fields = ("master",)

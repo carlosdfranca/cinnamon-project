@@ -831,6 +831,9 @@ def listar_fundos(request):
         "gestora_form": gestora_form,
         "aba_ativa": aba_ativa,
         "tipo_fundo_choices": Fundo.TIPO_FUNDO_CHOICES,
+        "fundos_usados": empresa.total_fundos() if empresa else None,
+        "fundos_max": empresa.max_fundos if empresa else None,
+        "pode_adicionar_fundo": empresa.pode_adicionar_fundo() if empresa else True,
     })
 
 
@@ -869,6 +872,16 @@ def adicionar_fundo(request):
                         else:
                             messages.error(request, "Selecione uma empresa válida que você participa.")
                             return redirect("listar_fundos")
+
+            empresa_dona = Empresa.objects.filter(pk=fundo.empresa_id).first()
+            if empresa_dona and not empresa_dona.pode_adicionar_fundo():
+                messages.error(
+                    request,
+                    f"Limite de fundos atingido para {empresa_dona.nome} "
+                    f"({empresa_dona.total_fundos()}/{empresa_dona.max_fundos}). "
+                    f"Contate o administrador para aumentar o limite."
+                )
+                return redirect("listar_fundos")
 
             fundo.save()
             form.save_configuracoes(fundo)
