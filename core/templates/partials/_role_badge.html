@@ -1,0 +1,14 @@
+{% comment %}
+Renders a Membership/Convite role as a Bootstrap badge.
+Usage: {% include 'partials/_role_badge.html' with role=m.role %}
+Optional `viewer_class` overrides the VIEWER badge color (default: bg-secondary).
+{% endcomment %}
+{% if role == "MASTER" %}
+  <span class="badge bg-dark">MASTER</span>
+{% elif role == "ADMIN" %}
+  <span class="badge bg-primary">ADMIN</span>
+{% elif role == "MEMBER" %}
+  <span class="badge bg-success">MEMBER</span>
+{% else %}
+  <span class="badge {{ viewer_class|default:"bg-secondary" }}">VIEWER</span>
+{% endif %}

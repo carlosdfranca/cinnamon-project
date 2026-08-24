@@ -489,7 +489,14 @@ label {
 .table-responsive {
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color);
-    overflow: hidden;
+    /* overflow-x:auto restores Bootstrap's horizontal scroll, which `overflow:hidden`
+       was killing (main.css loads after bootstrap.css, so this rule always won).
+       overflow-y:hidden keeps the scrollbar situation deterministic — with only
+       overflow-x:auto, overflow-y computes to auto and Windows/Firefox commonly add
+       a spurious vertical scrollbar to an auto-height block. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ================================
@@ -663,7 +670,7 @@ label {
 }
 
 /* ── Responsivo: mobile oculta branding ── */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .login-panel--brand { display: none; }
     .login-panel--form { padding: 2rem 1.25rem; }
 }
@@ -690,7 +697,8 @@ label {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    height: 72px;
+    --nav-h: 72px;
+    min-height: var(--nav-h);
     display: flex;
     align-items: center;
     margin-bottom: 0;
@@ -701,8 +709,11 @@ label {
     padding: 0 1.5rem;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
     gap: 0.5rem;
-    height: 100%;
+    min-height: var(--nav-h);
+    min-width: 0;
 }
 
 /* Brand */
@@ -797,10 +808,11 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
 
 /* Nav links */
 .site-nav__links {
-    display: flex !important;
+    display: flex;
     align-items: center;
     flex: 1;
     gap: 0;
+    min-width: 0;
 }
 .site-nav__menu {
     list-style: none;
@@ -810,6 +822,13 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
     align-items: center;
     gap: 0;
     flex: 1;
+    min-width: 0;
+}
+/* Drawer-only chrome (header/dividers/footer) — hidden on desktop, shown <1200px */
+.site-nav__drawer-header,
+.site-nav__drawer-divider,
+.site-nav__drawer-footer {
+    display: none;
 }
 .site-nav__link {
     display: flex;
@@ -991,13 +1010,14 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
 /* Mobile hamburger */
 .site-nav__toggle {
     display: none;
+    align-items: center;
+    justify-content: center;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 7px;
     color: var(--text-secondary);
     font-size: 1.2rem;
     padding: 0.25rem 0.5rem;
-    margin-left: auto;
     cursor: pointer;
     line-height: 1;
 }
@@ -1018,8 +1038,8 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
    Responsive Breakpoints
 ================================ */
 
-/* Large screens: optimize space */
-@media (max-width: 1200px) {
+/* Compact desktop: labels shrink, only avatar shown for user (1200–1439px) */
+@media (min-width: 1200px) and (max-width: 1439.98px) {
     .site-nav__inner {
         gap: 0.35rem;
         padding: 0 1rem;
@@ -1028,69 +1048,32 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
         margin-right: 0.5rem;
     }
     .site-nav__link {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.88rem;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.85rem;
     }
     .site-nav__empresa {
         margin-right: 0.35rem;
     }
-}
-
-/* Tablet landscape: compact mode */
-@media (max-width: 992px) {
-    .site-nav {
-        height: 64px;
-    }
-    .site-nav__inner {
-        gap: 0.3rem;
-    }
-    .site-nav__logo {
-        height: 38px;
-    }
-    .site-nav__brand {
-        font-size: 0.95rem;
-        margin-right: 0.4rem;
-    }
-    .site-nav__link {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.85rem;
-        gap: 0.25rem;
-    }
-    .site-nav__user-btn {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.85rem;
-        gap: 0.45rem;
+    .site-nav__empresa-select {
+        max-width: 140px;
     }
     .site-nav__user-btn > span:not(.site-nav__avatar-fallback) {
-        max-width: 100px;
-    }
-    .site-nav__avatar-fallback,
-    .site-nav__avatar {
-        width: 30px;
-        height: 30px;
-        font-size: 0.75rem;
-    }
-    .site-nav__theme-btn {
-        width: 30px;
-        height: 30px;
-        font-size: 0.85rem;
-    }
-    .site-nav__empresa-select {
-        font-size: 0.82rem;
-        max-width: 150px;
+        display: none;
     }
 }
 
-/* Mobile: collapsible menu with hamburger */
-@media (max-width: 768px) {
+/* Mobile / tablet: side drawer with hamburger (<1200px) */
+@media (max-width: 1199.98px) {
     .site-nav {
-        height: auto;
-        min-height: 56px;
+        --nav-h: 56px;
+        /* backdrop-filter creates a containing block for position:fixed descendants,
+           which would anchor the drawer to the navbar instead of the viewport */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--surface-1);
     }
     .site-nav__inner {
-        flex-wrap: wrap;
-        padding: 0.5rem 1rem;
-        overflow-x: auto;
+        padding: 0 1rem;
     }
     .site-nav__logo {
         height: 28px;
@@ -1099,84 +1082,174 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
         font-size: 0.9rem;
         margin-right: 0;
     }
+
     .site-nav__toggle {
         display: flex;
-        align-items: center;
         order: 2;
+        position: relative;
+        z-index: 1003;
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
     }
+
     .site-nav__user {
-        order: 3;
+        order: 1;
         margin-left: auto;
         border-left: none;
         padding-left: 0;
-        gap: 0.2rem;
+        gap: 0.35rem;
         overflow: visible;
     }
-    .site-nav__theme-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 0.8rem;
-        margin-right: 0.25rem;
+    /* extra .site-nav qualifier: outranks the unconditional .site-nav__theme-btn
+       base rule defined later in the file (equal specificity would lose to it) */
+    .site-nav .site-nav__theme-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+        margin-right: 0;
     }
     .site-nav__user-btn {
         padding: 0.3rem 0.5rem;
-        font-size: 0.82rem;
         gap: 0.4rem;
+        /* actions live in the drawer footer on mobile — this becomes a decorative identity chip */
+        pointer-events: none;
     }
     .site-nav__user-btn > span:not(.site-nav__avatar-fallback) {
         display: none;
     }
+    .site-nav__user-btn .site-nav__chevron {
+        display: none;
+    }
     .site-nav__avatar-fallback,
     .site-nav__avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 0.7rem;
+        width: 40px;
+        height: 40px;
+        font-size: 0.85rem;
     }
-    
-    /* Collapsible menu */
-    .site-nav__links {
-        display: none;
-        order: 4;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.15rem;
-        padding: 0.5rem 0 0.5rem;
-        width: 100%;
-        border-top: 1px solid var(--border-color);
-        margin-top: 0.5rem;
-    }
-    .site-nav__links.is-open {
-        display: flex;
-    }
+
     .site-nav__empresa--desktop {
         display: none;
     }
     .site-nav__empresa--mobile {
         display: block;
+        padding: 0 1rem;
+        margin-bottom: 0;
     }
     .site-nav__empresa-form {
         width: 100%;
         padding: 0.4rem 0.75rem;
     }
     .site-nav__empresa-select {
-        font-size: 0.85rem;
+        font-size: 16px; /* >=16px prevents iOS Safari auto-zoom on focus */
         max-width: 100%;
         flex: 1;
     }
+
+    /* Drawer */
+    .site-nav__links {
+        position: fixed;
+        inset: 0 0 0 auto;
+        width: min(82vw, 340px);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: calc(var(--nav-h) + 0.5rem) 0 max(1rem, env(safe-area-inset-bottom));
+        background: var(--surface-2);
+        border-left: 1px solid var(--border-color);
+        box-shadow: -18px 0 48px rgba(0, 0, 0, 0.45);
+        z-index: 1002;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+    }
+    .site-nav__links.is-open {
+        transform: translateX(0);
+    }
+
+    .site-nav__drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1rem 0.75rem;
+    }
+    .site-nav__drawer-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+    }
+    .site-nav__drawer-close {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        cursor: pointer;
+        border-radius: 8px;
+    }
+    .site-nav__drawer-close:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-primary);
+    }
+
+    .site-nav__drawer-divider {
+        display: block;
+        height: 1px;
+        background: var(--border-color);
+        margin: 0.5rem 1rem;
+    }
+
     .site-nav__menu {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
         width: 100%;
+        padding: 0 0.5rem;
+        gap: 0.15rem;
     }
     .site-nav__menu li {
         width: 100%;
     }
     .site-nav__link {
         width: 100%;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.88rem;
+        min-height: 48px;
+        padding: 0.65rem 0.75rem;
+        font-size: 0.92rem;
         gap: 0.5rem;
     }
+
+    .site-nav__drawer-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        padding: 0 0.5rem;
+    }
+    .site-nav__drawer-user {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 0.75rem 0.75rem;
+    }
+    .site-nav__drawer-username {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .site-nav__drawer-footer .site-nav__dropdown-item {
+        min-height: 48px;
+        font-size: 0.9rem;
+    }
+
     .site-nav__dropdown {
         position: static;
         box-shadow: none;
@@ -1184,12 +1257,31 @@ html[data-theme="light"] .site-nav__logo--light { display: block; }
         background: rgba(255, 255, 255, 0.03);
         margin: 0.2rem 0 0.2rem 1rem;
     }
+
+    /* Backdrop behind the drawer */
+    .site-nav__backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1001;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    .site-nav__backdrop.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    body.site-nav-open {
+        overflow: hidden;
+    }
 }
 
 /* Very small mobile devices */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .site-nav__inner {
-        padding: 0.5rem 0.75rem;
+        padding: 0 0.75rem;
     }
     .site-nav__logo {
         height: 24px;
@@ -1270,7 +1362,7 @@ nav.navbar {
 /* already covered in alerts section above */
 
 /* === Responsividade === */
-@media (max-width: 576px) {
+@media (max-width: 575.98px) {
     .brand-logo {
         max-width: 40px;
     }
@@ -1969,8 +2061,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -2017,8 +2109,12 @@ html[data-theme="light"] body {
 
 /* Navbar */
 html[data-theme="light"] .site-nav {
-    background: rgba(248, 245, 240, 0.96);
     border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+}
+@media (min-width: 1200px) {
+    html[data-theme="light"] .site-nav {
+        background: rgba(248, 245, 240, 0.96);
+    }
 }
 html[data-theme="light"] .site-nav__theme-btn {
     background: rgba(0, 0, 0, 0.05);
@@ -2255,4 +2351,321 @@ html[data-theme="light"] .kpi-card--amber .kpi-card__value { color: #b45309; }
 html[data-theme="light"] .text-light { color: var(--text-secondary) !important; }
 html[data-theme="light"] .text-white { color: var(--text-primary) !important; }
 html[data-theme="light"] .text-muted  { color: var(--text-muted) !important; }
+
+/* ================================================================
+   Mobile content layer — record cards, touch targets, modal sheet
+   ================================================================
+   Breakpoint contract (do not add more numbers than this):
+     1199.98px  navbar drawer ONLY — mirrors DRAWER_BREAKPOINT in main.js, not reused here
+      767.98px  content: table -> cards, stacked page-header actions, 44px touch
+                targets, 16px form inputs (matches Bootstrap's `md` boundary)
+      575.98px  modal -> fullscreen sheet (Bootstrap's `sm` boundary)
+      479.98px  extra-small density tweaks (stats grids etc.)
+
+   This section is intentionally the LAST thing in the file. Several rules below
+   (.btn min-height, .modal-content radius/border, hover neutralizing) target
+   selectors that already have an unconditional declaration for the same property
+   earlier in this file, at equal specificity. A @media query adds no specificity,
+   so being later in the cascade is the only reason these overrides take effect —
+   moving this section earlier will silently break them. See the existing precedent
+   at the .site-nav__theme-btn rule (~line 1097) for the same situation. */
+
+/* --- Record card component ------------------------------------------------
+   Mobile stand-in for a data table row. Pair with a sibling
+   `.table-responsive.table-responsive--stacked` — exactly one of the two is
+   ever visible (display:none), so exactly one is ever in the a11y tree.
+   Theme-token only: no hardcoded accent colors, so it needs no
+   html[data-theme="light"] overrides. Deliberately has no :hover rule. */
+.record-cards {
+    display: none;
+}
+.record-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 0.875rem 1rem;
+}
+.record-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+.record-card__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.record-card__head .badge {
+    flex-shrink: 0;
+}
+.record-card__meta {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, auto) 1fr;
+    gap: 0.3rem 0.75rem;
+    margin: 0;
+    font-size: 0.8rem;
+}
+.record-card__meta dt {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    align-self: center;
+}
+.record-card__meta dd {
+    margin: 0;
+    color: var(--text-secondary);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.record-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+/* flex-basis 120px (not 0): with 2 actions (the common case) they still
+   split the row evenly via flex-grow, same as before. With 3+ actions (the
+   demonstracao_financeira period card: Documentos/Ver DF/Importar) on a
+   320-375px phone, forcing three equal thirds squeezed each button under
+   ~90px and wrapped its label across 3 lines — this lets the row wrap
+   instead, so buttons keep a readable minimum width. */
+.record-card__actions > * {
+    flex: 1 1 120px;
+    min-width: 0;
+}
+.record-card__actions .btn {
+    width: 100%;
+}
+.record-card__note {
+    margin-top: 0.875rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Carries the same urgency signal as Bootstrap's table-success/danger/warning
+   row classes (themselves never overridden in this file, so they render with
+   raw Bootstrap colors) onto the card's left accent border. Only
+   border-left-color changes — the 3px width from .record-card survives. */
+.record-card--success { border-left-color: var(--status-active); }
+.record-card--danger  { border-left-color: #ef4444; }
+.record-card--warning { border-left-color: #f59e0b; }
+
+@media (max-width: 767.98px) {
+    /* Table -> cards */
+    .table-responsive--stacked {
+        display: none;
+    }
+    .record-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Page header stacks, actions go full-width. `> .btn` (not `> *`) so an
+       icon-only .btn-back in a page-header doesn't get stretched too. */
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.875rem;
+        margin-bottom: 1.25rem;
+    }
+    .page-header__title {
+        font-size: 1.25rem;
+    }
+    .page-header__subtitle {
+        overflow-wrap: anywhere;
+    }
+    .page-header__actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .page-header__actions > .btn {
+        width: 100%;
+    }
+
+    /* Touch targets (WCAG 2.5.5). Padding-based, not flex — some buttons in
+       this app rely on a literal text-node space between an <i> icon and its
+       label (no `me-1`), and switching .btn to inline-flex would collapse it. */
+    .btn,
+    .btn-sm {
+        min-height: 44px;
+        padding-top: 0.72rem;
+        padding-bottom: 0.72rem;
+    }
+    .btn-icon-ds,
+    .btn-back {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+    }
+
+    /* >=16px prevents iOS Safari from auto-zooming on focus. Same reasoning
+       as .site-nav__empresa-select (~line 1137). Class selectors only — no
+       bare input/select/textarea, to avoid touching third-party widgets. */
+    .form-control,
+    .form-select,
+    .funds-search-input {
+        font-size: 16px;
+    }
+
+    .empty-state {
+        padding: 2.5rem 1.25rem;
+    }
+    .empty-state__icon {
+        font-size: 2.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Horizontally-scrolling filter pill row instead of wrapping to N rows
+       once pills grow to a 44px touch target. `!important` is required:
+       the template also carries Bootstrap's `.flex-wrap` utility class
+       (`flex-wrap: wrap !important`), which otherwise wins regardless of
+       source order or media query. */
+    .filter-pills {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        margin-inline: -1rem;
+        padding-inline: 1rem;
+        padding-bottom: 0.25rem;
+    }
+    .filter-pills::-webkit-scrollbar {
+        display: none;
+    }
+    .filter-pills > .btn {
+        flex: 0 0 auto;
+    }
+
+    /* DataTables (1.13 + bootstrap5 integration). The `div.…div.…` prefixes
+       match the specificity of the integration stylesheet's own selectors
+       (e.g. `div.dataTables_wrapper div.dataTables_paginate`); main.css loads
+       after it (base.html), so equal specificity here is enough to win, but
+       a bare `.dataTables_wrapper .dataTables_X` (used elsewhere in this
+       file, further up) is NOT enough for display/width/white-space/
+       justify-content — only for properties like padding/color. */
+    div.dataTables_wrapper div.dataTables_length {
+        display: none;
+    }
+    div.dataTables_wrapper div.dataTables_filter {
+        text-align: left;
+        padding: 0.75rem 0 0.5rem;
+    }
+    div.dataTables_wrapper div.dataTables_filter label {
+        display: block;
+        width: 100%;
+    }
+    div.dataTables_wrapper div.dataTables_filter input {
+        display: block;
+        width: 100%;
+        margin-left: 0;
+        min-height: 44px;
+        padding: 0.5rem 0.75rem;
+    }
+    div.dataTables_wrapper div.dataTables_info {
+        text-align: center;
+        padding: 0.5rem 0 0.25rem;
+        font-size: 0.78rem;
+    }
+    div.dataTables_wrapper div.dataTables_paginate {
+        text-align: center;
+        white-space: normal;
+        padding: 0.25rem 0 0.5rem;
+    }
+    div.dataTables_wrapper div.dataTables_paginate ul.pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem;
+        margin: 0;
+    }
+    .dataTables_wrapper .page-link {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* --- Modal -> fullscreen sheet on phones -----------------------------------
+   .modal-fullscreen-sm-down alone isn't enough: .modal-content's own
+   border-radius/border (set earlier, unconditionally) would otherwise survive
+   and clip the fullscreen sheet's header. Scoped entirely to
+   .modal-fullscreen-sm-down so other modals in the app are untouched. */
+@media (max-width: 575.98px) {
+    .modal-fullscreen-sm-down .modal-content {
+        border-radius: 0;
+        border: 0;
+    }
+    .modal-fullscreen-sm-down .modal-body {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* column-reverse: both templates list the primary action first in source
+       order (Salvar/Remover/Enviar, then Cancelar). Reversed, Cancelar sits on
+       top and the primary action lands at the thumb-reachable bottom. */
+    .modal-fullscreen-sm-down .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+    .modal-fullscreen-sm-down .modal-footer > * {
+        margin: 0;
+        width: 100%;
+    }
+    .modal-fullscreen-sm-down .modal-header .btn-close {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        background-size: 1rem auto;
+        margin: -0.5rem -0.75rem -0.5rem auto;
+    }
+}
+
+/* --- Touch devices latch :hover after a tap --------------------------------
+   Neutralize hover-only MOTION only — color changes stay as tap feedback, and
+   :focus-visible is left untouched. Several of the button hover rules earlier
+   in this file share one rule block with :focus-visible (e.g. .btn-primary),
+   so wrapping them in @media (hover: hover) instead would remove the focus
+   style for any touch device with an attached keyboard. This override
+   approach avoids that regression. .btn:active's `!important` transform
+   survives this, so tap press-feedback still works. */
+@media (hover: none) {
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-primary-ds:hover,
+    .btn-ghost-ds:hover,
+    .btn-outline-secondary:hover,
+    .btn-secondary:hover,
+    .btn-outline-primary:hover,
+    .btn-success:hover,
+    .btn-icon-ds:hover,
+    .btn-icon-ds--blue:hover,
+    .btn-icon-ds--red:hover,
+    .fidc-card:hover,
+    .fundo-card:hover {
+        transform: none;
+    }
+    .card:hover {
+        border-color: var(--border-color);
+    }
+}
 

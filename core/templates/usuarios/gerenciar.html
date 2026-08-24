@@ -1,253 +1,9 @@
 {% extends 'base/base.html' %}
 {% load static %}
-{% load widget_tweaks %}
 
 {% block title %}Gerenciar Usuários{% endblock %}
 
-{% block conteudo %}
-{% include 'base/navbar.html' %}
-
-<div class="container py-4">
-  {% if messages %}
-    <div class="mb-3">
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  <div class="card">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Usuários da empresa: <span class="fw-bold">{{ empresa.nome }}</span></h4>
-        {% if can_manage %}
-          <div class="d-flex gap-2">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalConvidarUsuario">
-              <i class="bi bi-envelope-plus me-1"></i> Convidar Usuário
-            </button>
-            <a href="{% url 'listar_convites' %}" class="btn btn-outline-primary">
-              <i class="bi bi-list-ul me-1"></i> Ver Convites
-            </a>
-          </div>
-        {% endif %}
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle" id="tabela-usuarios">
-          <thead>
-            <tr>
-              <th scope="col" style="width: 20%;">Nome</th>
-              <th scope="col" style="width: 20%;">Username</th>
-              <th scope="col" style="width: 30%;">Email</th>
-              <th scope="col" style="width: 10%;" class="text-center">Papel</th>
-              {% if can_manage %}
-                <th scope="col" style="width: 10%;" class="text-center">Editar</th>
-                <th scope="col" style="width: 10%;" class="text-center">Remover</th>
-              {% endif %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for m in memberships %}
-              <tr>
-                <td class="fw-semibold">{{ m.usuario.first_name|default:"—" }}</td>
-                <td>{{ m.usuario.username }}</td>
-                <td>{{ m.usuario.email|default:"—" }}</td>
-                <td class="text-center">
-                  {% if m.role == "MASTER" %}
-                    <span class="badge bg-dark">MASTER</span>
-                  {% elif m.role == "ADMIN" %}
-                    <span class="badge bg-primary">ADMIN</span>
-                  {% elif m.role == "MEMBER" %}
-                    <span class="badge bg-success">MEMBER</span>
-                  {% else %}
-                    <span class="badge bg-secondary">VIEWER</span>
-                  {% endif %}
-                </td>
-
-                {% if can_manage %}
-                <td class="text-center">
-                  {% if m.role == "MASTER" %}
-                    <button class="btn btn-sm btn-outline-secondary" disabled title="MASTER não pode ser editado pela interface">
-                      <i class="bi bi-lock-fill"></i>
-                    </button>
-                  {% else %}
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditUser{{ m.id }}">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                  {% endif %}
-                </td>
-                <td class="text-center">
-                  {% if m.role == "MASTER" %}
-                    <button class="btn btn-sm btn-outline-danger" disabled title="MASTER não pode ser removido pela interface">
-                      <i class="bi bi-lock-fill"></i>
-                    </button>
-                  {% else %}
-                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteUser{{ m.id }}">
-                      <i class="bi bi-trash3"></i>
-                    </button>
-                  {% endif %}
-                </td>
-                {% endif %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% if can_manage %}
-<!-- Modais Editar / Remover Usuário -->
-{% for m in memberships %}
-<!-- Modal Editar -->
-<div class="modal fade" id="modalEditUser{{ m.id }}" tabindex="-1" aria-labelledby="modalEditUserLabel{{ m.id }}" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{% url 'empresa_usuario_editar' m.id %}">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalEditUserLabel{{ m.id }}">Alterar Papel do Usuário</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          <div class="info-box mb-3">
-            <div class="info-box__icon">
-              <i class="bi bi-info-circle"></i>
-            </div>
-            <div class="info-box__content">
-              <strong>Informações pessoais:</strong>
-              <p class="mb-0 mt-1">O usuário pode alterar seu próprio nome, email e senha em <strong>"Editar Perfil"</strong>.</p>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Usuário</label>
-            <input type="text" class="form-control" value="{{ m.usuario.get_full_name|default:m.usuario.username }}" disabled>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Papel na empresa <span class="text-danger">*</span></label>
-            <select name="role" class="form-select" required {% if m.role == "MASTER" %}disabled{% endif %}>
-              <option value="ADMIN" {% if m.role == "ADMIN" %}selected{% endif %}>ADMIN (gerencia usuários)</option>
-              <option value="MEMBER" {% if m.role == "MEMBER" %}selected{% endif %}>MEMBER (acesso padrão)</option>
-              <option value="VIEWER" {% if m.role == "VIEWER" %}selected{% endif %}>VIEWER (somente leitura)</option>
-            </select>
-            {% if m.role == "MASTER" %}
-              <div class="form-text text-warning">
-                <i class="bi bi-shield-lock-fill me-1"></i>
-                Este usuário é MASTER da empresa e não pode ter o papel alterado.
-              </div>
-            {% else %}
-              <div class="form-text">O papel MASTER é criado apenas pelo BackOffice.</div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="modal-footer">
-          {% if m.role == "MASTER" %}
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-          {% else %}
-            <button type="submit" class="btn btn-primary">Salvar</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          {% endif %}
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Remover -->
-<div class="modal fade" id="modalDeleteUser{{ m.id }}" tabindex="-1" aria-labelledby="modalDeleteUserLabel{{ m.id }}" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{% url 'empresa_usuario_excluir' m.id %}">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalDeleteUserLabel{{ m.id }}">Remover Vínculo</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          Tem certeza que deseja remover o vínculo de <strong>{{ m.usuario }}</strong> com a empresa <strong>{{ empresa.nome }}</strong>?
-          {% if m.role == "MASTER" %}
-            <div class="alert alert-warning mt-3">
-              Este usuário é o MASTER atual. Transfira a função de MASTER antes de remover.
-            </div>
-          {% endif %}
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-danger">Remover</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endfor %}
-
-<!-- Modal Convidar Usuário (NOVO) -->
-<div class="modal fade" id="modalConvidarUsuario" tabindex="-1" aria-labelledby="modalConvidarUsuarioLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{% url 'convidar_usuario' %}">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalConvidarUsuarioLabel">
-            <i class="bi bi-envelope-plus me-2"></i> Convidar Usuário por Email
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          <div class="info-box mb-3">
-            <div class="info-box__icon">
-              <i class="bi bi-info-circle"></i>
-            </div>
-            <div class="info-box__content">
-              <strong>Como funciona:</strong>
-              <ol class="mb-0 mt-1 ps-3">
-                <li>O usuário receberá um email com link único</li>
-                <li>Ele completará o cadastro (username, nome, senha)</li>
-                <li>Entrará automaticamente na plataforma</li>
-              </ol>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Email <span class="text-danger">*</span></label>
-            <input type="email" name="email" class="form-control" placeholder="usuario@exemplo.com" required>
-            <small class="form-text text-muted">O convite será enviado para este endereço.</small>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label">Papel na empresa <span class="text-danger">*</span></label>
-            <select name="role" class="form-select" required>
-              <option value="" disabled selected>Selecione...</option>
-              <option value="ADMIN">ADMIN (gerencia usuários)</option>
-              <option value="MEMBER">MEMBER (acesso padrão)</option>
-              <option value="VIEWER">VIEWER (somente leitura)</option>
-            </select>
-            <div class="form-text text-muted">O papel MASTER é criado apenas pelo BackOffice.</div>
-          </div>
-          
-          <div class="warning-box">
-            <i class="bi bi-clock-history"></i>
-            <span>O convite expira em 7 dias. Você pode reenviá-lo se necessário.</span>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-send me-1"></i> Enviar Convite
-          </button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-{% endif %}
-
+{% block extra_head %}
 <style>
 /* Info Box - Modal de Convite */
 .info-box {
@@ -321,5 +77,293 @@
   color: var(--text-primary);
 }
 </style>
+{% endblock %}
+
+{% block conteudo %}
+{% include 'base/navbar.html' %}
+
+<div class="container py-4">
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <div class="page-header">
+        <div class="page-header__titles">
+          <h4 class="page-header__title">Usuários da empresa</h4>
+          <p class="page-header__subtitle">{{ empresa.nome }}</p>
+        </div>
+        {% if can_manage %}
+          <div class="page-header__actions">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalConvidarUsuario">
+              <i class="bi bi-envelope-plus me-1"></i> Convidar Usuário
+            </button>
+            <a href="{% url 'listar_convites' %}" class="btn btn-outline-primary">
+              <i class="bi bi-list-ul me-1"></i> Ver Convites
+            </a>
+          </div>
+        {% endif %}
+      </div>
+      <div class="table-responsive table-responsive--stacked">
+        <table class="table table-striped table-hover align-middle" id="tabela-usuarios">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 20%;">Nome</th>
+              <th scope="col" style="width: 20%;">Username</th>
+              <th scope="col" style="width: 30%;">Email</th>
+              <th scope="col" style="width: 10%;" class="text-center">Papel</th>
+              {% if can_manage %}
+                <th scope="col" style="width: 10%;" class="text-center">Editar</th>
+                <th scope="col" style="width: 10%;" class="text-center">Remover</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in memberships %}
+              <tr>
+                <td class="fw-semibold">{{ m.usuario.first_name|default:"—" }}</td>
+                <td>{{ m.usuario.username }}</td>
+                <td>{{ m.usuario.email|default:"—" }}</td>
+                <td class="text-center">
+                  {% include 'partials/_role_badge.html' with role=m.role %}
+                </td>
+
+                {% if can_manage %}
+                <td class="text-center">
+                  {% if m.role == "MASTER" %}
+                    <button class="btn btn-sm btn-outline-secondary" disabled title="MASTER não pode ser editado pela interface">
+                      <i class="bi bi-lock-fill"></i>
+                    </button>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalEditUser{{ m.id }}">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  {% if m.role == "MASTER" %}
+                    <button class="btn btn-sm btn-outline-danger" disabled title="MASTER não pode ser removido pela interface">
+                      <i class="bi bi-lock-fill"></i>
+                    </button>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteUser{{ m.id }}">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  {% endif %}
+                </td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{% if can_manage %}6{% else %}4{% endif %}" class="text-center text-muted py-4">
+                  Nenhum usuário vinculado a esta empresa.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="record-cards">
+        {% for m in memberships %}
+          <article class="record-card">
+            <div class="record-card__head">
+              <div class="record-card__title">
+                {{ m.usuario.get_full_name|default:m.usuario.username }}
+              </div>
+              {% include 'partials/_role_badge.html' with role=m.role %}
+            </div>
+            <dl class="record-card__meta">
+              <dt>Username</dt><dd>{{ m.usuario.username }}</dd>
+              <dt>Email</dt><dd>{{ m.usuario.email|default:"—" }}</dd>
+            </dl>
+            {% if can_manage %}
+              {% if m.role == "MASTER" %}
+                <p class="record-card__note">
+                  <i class="bi bi-shield-lock-fill"></i>
+                  Papel MASTER — gerenciado apenas pelo BackOffice.
+                </p>
+              {% else %}
+                <div class="record-card__actions">
+                  <button type="button" class="btn btn-sm btn-outline-secondary"
+                          data-bs-toggle="modal" data-bs-target="#modalEditUser{{ m.id }}">
+                    <i class="bi bi-pencil me-1"></i> Editar
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal" data-bs-target="#modalDeleteUser{{ m.id }}">
+                    <i class="bi bi-trash3 me-1"></i> Remover
+                  </button>
+                </div>
+              {% endif %}
+            {% endif %}
+          </article>
+        {% empty %}
+          <div class="empty-state">
+            <i class="bi bi-people empty-state__icon"></i>
+            <h5 class="empty-state__title">Nenhum usuário vinculado</h5>
+            <p class="empty-state__text">Convide um usuário para começar.</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if can_manage %}
+<!-- Modais Editar / Remover Usuário -->
+{% for m in memberships %}
+<!-- Modal Editar -->
+<div class="modal fade" id="modalEditUser{{ m.id }}" tabindex="-1" aria-labelledby="modalEditUserLabel{{ m.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'empresa_usuario_editar' m.id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalEditUserLabel{{ m.id }}">Alterar Papel do Usuário</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="info-box mb-3">
+            <div class="info-box__icon">
+              <i class="bi bi-info-circle"></i>
+            </div>
+            <div class="info-box__content">
+              <strong>Informações pessoais:</strong>
+              <p class="mb-0 mt-1">O usuário pode alterar seu próprio nome, email e senha em <strong>"Editar Perfil"</strong>.</p>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input type="text" class="form-control" value="{{ m.usuario.get_full_name|default:m.usuario.username }}" disabled>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Papel na empresa <span class="text-danger">*</span></label>
+            <select name="role" class="form-select" required {% if m.role == "MASTER" %}disabled{% endif %}>
+              <option value="ADMIN" {% if m.role == "ADMIN" %}selected{% endif %}>ADMIN (gerencia usuários)</option>
+              <option value="MEMBER" {% if m.role == "MEMBER" %}selected{% endif %}>MEMBER (acesso padrão)</option>
+              <option value="VIEWER" {% if m.role == "VIEWER" %}selected{% endif %}>VIEWER (somente leitura)</option>
+            </select>
+            {% if m.role == "MASTER" %}
+              <div class="form-text text-warning">
+                <i class="bi bi-shield-lock-fill me-1"></i>
+                Este usuário é MASTER da empresa e não pode ter o papel alterado.
+              </div>
+            {% else %}
+              <div class="form-text">O papel MASTER é criado apenas pelo BackOffice.</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          {% if m.role == "MASTER" %}
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          {% else %}
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Remover -->
+<div class="modal fade" id="modalDeleteUser{{ m.id }}" tabindex="-1" aria-labelledby="modalDeleteUserLabel{{ m.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'empresa_usuario_excluir' m.id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDeleteUserLabel{{ m.id }}">Remover Vínculo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          Tem certeza que deseja remover o vínculo de <strong>{{ m.usuario }}</strong> com a empresa <strong>{{ empresa.nome }}</strong>?
+          {% if m.role == "MASTER" %}
+            <div class="alert alert-warning mt-3">
+              Este usuário é o MASTER atual. Transfira a função de MASTER antes de remover.
+            </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Remover</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Modal Convidar Usuário (NOVO) -->
+<div class="modal fade" id="modalConvidarUsuario" tabindex="-1" aria-labelledby="modalConvidarUsuarioLabel" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'convidar_usuario' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalConvidarUsuarioLabel">
+            <i class="bi bi-envelope-plus me-2"></i> Convidar Usuário por Email
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="info-box mb-3">
+            <div class="info-box__icon">
+              <i class="bi bi-info-circle"></i>
+            </div>
+            <div class="info-box__content">
+              <strong>Como funciona:</strong>
+              <ol class="mb-0 mt-1 ps-3">
+                <li>O usuário receberá um email com link único</li>
+                <li>Ele completará o cadastro (username, nome, senha)</li>
+                <li>Entrará automaticamente na plataforma</li>
+              </ol>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control" placeholder="usuario@exemplo.com" required>
+            <small class="form-text text-muted">O convite será enviado para este endereço.</small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Papel na empresa <span class="text-danger">*</span></label>
+            <select name="role" class="form-select" required>
+              <option value="" disabled selected>Selecione...</option>
+              <option value="ADMIN">ADMIN (gerencia usuários)</option>
+              <option value="MEMBER">MEMBER (acesso padrão)</option>
+              <option value="VIEWER">VIEWER (somente leitura)</option>
+            </select>
+            <div class="form-text text-muted">O papel MASTER é criado apenas pelo BackOffice.</div>
+          </div>
+          
+          <div class="warning-box">
+            <i class="bi bi-clock-history"></i>
+            <span>O convite expira em 7 dias. Você pode reenviá-lo se necessário.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send me-1"></i> Enviar Convite
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endif %}
 
 {% endblock %}

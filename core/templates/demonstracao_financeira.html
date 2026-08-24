@@ -196,13 +196,100 @@
     display: block;
     margin-bottom: .625rem;
   }
+
+  /* Modo de edição inline de um item do checklist (replaces the inline
+     "flex-grow-1 d-flex gap-1 align-items-center" Bootstrap utilities that
+     used to live directly on the JS-generated span). */
+  .cl-edit-wrap {
+    display: flex;
+    flex-grow: 1;
+    gap: .25rem;
+    align-items: center;
+  }
+  /* Hides the edit/delete buttons while a row is being edited, without
+     collapsing their reserved width on desktop (visibility, not display) —
+     matches the JS toggling `.is-editing` instead of an inline style. */
+  .checklist-item-actions.is-editing { visibility: hidden; }
+
+  /* Menu do dropdown de status (criado em JS e anexado a document.body —
+     ver _sd/_openSd no bloco de scripts). Substitui os antigos
+     onmouseover/onmouseout inline por :hover real. */
+  .sd-menu__item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 5px;
+    gap: 8px;
+  }
+  .sd-menu__item:hover,
+  .sd-menu__item:focus-visible {
+    background: var(--surface-3);
+  }
+
+  /* ── Mobile (767.98px, mesmo contrato de breakpoint do main.css) ─────
+     Overrides de seletores que só existem NESTA folha ficam aqui, não no
+     main.css: extra_head é renderizado depois do main.css (base.html),
+     então este <style> sempre vence empates de especificidade — um
+     override em main.css para .btn-icon-action, .checklist-item-row etc.
+     seria derrotado silenciosamente. */
+  @media (max-width: 767.98px) {
+    .periodos-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: .75rem;
+    }
+    .periodos-toolbar #period-actions {
+      flex-direction: column;
+    }
+    .periodos-toolbar #period-actions > .btn,
+    .periodos-toolbar #period-actions > a {
+      width: 100%;
+    }
+
+    .btn-icon-action {
+      width: 44px;
+      height: 44px;
+      font-size: 1rem;
+    }
+    .sd-menu__item {
+      min-height: 44px;
+    }
+
+    .checklist-item-row {
+      padding: .875rem 1rem;
+    }
+    .checklist-section-header {
+      padding: .5rem 1rem;
+    }
+    .checklist-add-area {
+      padding: 1rem 1rem 1.25rem;
+    }
+
+    /* No mobile as ações ficam reservando ~64px mesmo escondidas por
+       visibility:hidden (comportamento de desktop, acima) — num card de
+       375px isso deixa só ~90px para o campo de texto. display:none libera
+       esse espaço; a edição pode então quebrar em duas linhas. */
+    .checklist-item-actions.is-editing {
+      display: none;
+    }
+    .cl-edit-wrap {
+      flex-wrap: wrap;
+    }
+    .cl-edit-wrap input {
+      flex: 1 1 100%;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block conteudo %}
 {% include 'base/navbar.html' %}
 
-<div class="container py-5">
+<div class="container py-4">
 
   {% if messages %}
   <div class="mb-3">
@@ -267,7 +354,7 @@
     <!-- Tabela de períodos -->
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="periodos-toolbar d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-semibold mb-0 d-flex align-items-center gap-2">
             <i class="bi bi-calendar-range text-muted"></i>Períodos
             <span id="fundo-tipo-badge" class="badge" style="display:none;"></span>
@@ -348,7 +435,7 @@
      Modal: Importar Balancete
 ════════════════════════════════════════ -->
 <div class="modal fade" id="modal-importar" tabindex="-1" aria-labelledby="modal-importar-label" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
     <div class="modal-content">
       <form method="POST" action="{% url 'importar_balancete' %}" enctype="multipart/form-data">
         {% csrf_token %}
@@ -425,10 +512,10 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-upload me-1"></i>Importar
           </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         </div>
       </form>
     </div>
@@ -438,7 +525,7 @@
 {% if can_enviar_balancete %}
 <!-- Modal: Criar Período Manual -->
 <div class="modal fade" id="modalCriarPeriodoDF" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-fullscreen-sm-down">
     <div class="modal-content">
       <form id="form-criar-periodo-df" method="POST" action="">
         {% csrf_token %}
@@ -468,8 +555,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Criar Período</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         </div>
       </form>
     </div>
@@ -478,7 +565,7 @@
 
 <!-- Modal: Gerar Períodos Históricos -->
 <div class="modal fade" id="modalGerarHistoricoDF" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-fullscreen-sm-down">
     <div class="modal-content">
       <form id="form-gerar-historico-df" method="POST" action="">
         {% csrf_token %}
@@ -504,8 +591,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-primary"><i class="bi bi-clock-history me-1"></i>Gerar Períodos</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         </div>
       </form>
     </div>
@@ -515,7 +602,7 @@
 
 <!-- Modal: Checklist de Documentos do Período -->
 <div class="modal fade" id="modalChecklist" tabindex="-1" aria-labelledby="modalChecklistLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
     <div class="modal-content">
       <div class="modal-header">
         <div class="d-flex align-items-center justify-content-between w-100">
@@ -562,13 +649,18 @@
 
 
 {% block scripts %}
+{{ fundos_periodos|json_script:"df-periodos-data" }}
+{{ fundos_prazos|json_script:"df-prazos-data" }}
 <script>
+  const DF_PERIODOS = JSON.parse(document.getElementById("df-periodos-data").textContent);
+  const DF_PRAZOS   = JSON.parse(document.getElementById("df-prazos-data").textContent);
+
   document.addEventListener("DOMContentLoaded", function () {
     const selectFundo   = document.getElementById("select-fundo");
     const selectGestora = document.getElementById("select-gestora");
     const dfContainer   = document.getElementById("df-container");
-    let periodosPorFundo = {{ fundos_periodos|safe }};
-    const prazosPorFundo = {{ fundos_prazos|safe }};
+    const periodosPorFundo = DF_PERIODOS;   // same object reference — refreshPeriodos mutations are shared
+    const prazosPorFundo   = DF_PRAZOS;
     const canEnviarBalancete = {{ can_enviar_balancete|yesno:"true,false" }};
     let fundoAtual  = null;
     let dtPeriodos  = null;   // instância DataTables da tabela de períodos
@@ -660,7 +752,7 @@
       el.innerHTML = `
         <div class="alert alert-${tipo} alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
           <i class="bi ${icon} flex-shrink-0"></i>
-          <div>${msg}</div>
+          <div>${escapeHtml(msg)}</div>
           <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>`;
       el.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -677,6 +769,15 @@
           renderPeriodosTable(fundoId);
         });
     }
+
+    // O dropdown de status (_selectSd, definido fora deste closure) dispara
+    // este evento em vez de editar a linha/card no braço — assim tabela e
+    // cards nunca podem dessincronizar, e o `badge.closest('tr')` que existia
+    // antes (que retornava null quando o badge estava num card) deixa de
+    // ser necessário.
+    document.addEventListener("df:periodo-atualizado", function () {
+      if (fundoAtual) refreshPeriodos(fundoAtual);
+    });
 
     // ── AJAX: Balancete ───────────────────────────────────────
     const formBalancete = document.querySelector("#modal-importar form");
@@ -739,27 +840,28 @@
       const dataFormatada = dataVenc.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
       const dias  = prazo.dias_restantes;
       const status = prazo.status;
+      const periodoNome = escapeHtml(prazo.periodo_nome);
 
       const configs = {
         ok: {
           cls: "alert-success", icon: "bi-check-circle-fill",
           titulo: `Próximo vencimento em ${dataFormatada}`,
-          sub: `${dias} dia${dias !== 1 ? "s" : ""} restante${dias !== 1 ? "s" : ""} — ${prazo.periodo_nome}`,
+          sub: `${dias} dia${dias !== 1 ? "s" : ""} restante${dias !== 1 ? "s" : ""} — ${periodoNome}`,
         },
         aviso: {
           cls: "alert-warning", icon: "bi-exclamation-triangle-fill",
           titulo: `Vencimento se aproximando: ${dataFormatada}`,
-          sub: `${dias} dia${dias !== 1 ? "s" : ""} restante${dias !== 1 ? "s" : ""} — ${prazo.periodo_nome}`,
+          sub: `${dias} dia${dias !== 1 ? "s" : ""} restante${dias !== 1 ? "s" : ""} — ${periodoNome}`,
         },
         urgente: {
           cls: "alert-danger", icon: "bi-alarm-fill",
           titulo: `Urgente: vencimento em ${dataFormatada}`,
-          sub: `Apenas ${dias} dia${dias !== 1 ? "s" : ""} — ${prazo.periodo_nome}`,
+          sub: `Apenas ${dias} dia${dias !== 1 ? "s" : ""} — ${periodoNome}`,
         },
         vencida: {
           cls: "alert-danger", icon: "bi-x-circle-fill",
           titulo: `DF vencida há ${dias} dia${dias !== 1 ? "s" : ""}`,
-          sub: `Vencimento era em ${dataFormatada} — ${prazo.periodo_nome}`,
+          sub: `Vencimento era em ${dataFormatada} — ${periodoNome}`,
         },
       };
       const c = configs[status] || configs.ok;
@@ -775,15 +877,53 @@
     }
 
     // ── Tabela de períodos ────────────────────────────────────
+    // Data source for the mobile card list — mirrors whatever DataTables is
+    // currently displaying (see drawCallback below). Keyed by String(p.id)
+    // because dataset attributes are always strings.
+    const periodosPorId = new Map();
+
+    // pt-BR strings inlined: DataTables' `language.url` makes init ASYNC (it
+    // fetches the CDN file and gates the wrapper/first draw on the response),
+    // which both flashes an unstyled raw table on mobile while it loads and
+    // races with a second fund selection. Inlining keeps init synchronous, so
+    // the `dom`-built wrapper and the first drawCallback exist immediately.
+    const DT_PT_BR = {
+      emptyTable: "Nenhum registro encontrado",
+      info: "Mostrando _START_ até _END_ de _TOTAL_ registros",
+      infoEmpty: "Mostrando 0 até 0 de 0 registros",
+      infoFiltered: "(filtrado de _MAX_ registros no total)",
+      lengthMenu: "Mostrar _MENU_ registros",
+      loadingRecords: "Carregando...",
+      processing: "Processando...",
+      search: "Pesquisar:",
+      zeroRecords: "Nenhum registro encontrado",
+      paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
+      aria: {
+        sortAscending: ": ativar para ordenar a coluna de forma crescente",
+        sortDescending: ": ativar para ordenar a coluna de forma decrescente",
+      },
+    };
+
     function renderPeriodosTable(fundoId) {
       const container = document.getElementById("periodos-table-container");
       const periodos  = periodosPorFundo[fundoId] || [];
 
-      // Destruir instância anterior antes de reescrever o HTML
+      // Preserva busca/ordenação/página ao recriar a instância (ex: depois de
+      // trocar o status de um período, que hoje força um refresh completo).
+      const prev = dtPeriodos ? {
+        search: dtPeriodos.search(),
+        order: dtPeriodos.order(),
+        len: dtPeriodos.page.len(),
+        page: dtPeriodos.page(),
+      } : null;
+
       if (dtPeriodos) {
         dtPeriodos.destroy();
         dtPeriodos = null;
       }
+
+      periodosPorId.clear();
+      periodos.forEach(p => periodosPorId.set(String(p.id), p));
 
       if (!periodos.length) {
         container.innerHTML = `
@@ -799,36 +939,74 @@
         return;
       }
 
-      const rows = periodos.map(p => buildPeriodoRow(p, fundoId)).join("");
+      const rows = periodos.map(p => buildPeriodoRow(p)).join("");
+      // No .table-responsive wrapper here — the `dom` option below builds one
+      // in the right place (around just the <table>, not the DataTables
+      // controls). Writing it by hand here made the search/info/pagination
+      // controls live INSIDE the responsive scroll box, which clipped their
+      // left edge and added a phantom horizontal scrollbar even when the
+      // table fit — see main.css:1354's `.dataTables_wrapper .table-responsive`
+      // override, which never matched anything until this was fixed.
       container.innerHTML = `
-        <div class="table-responsive">
-          <table id="tabela-periodos" class="table table-ds table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Período</th>
-                <th>Tipo</th>
-                <th>Status</th>
-                <th>Vencimento</th>
-                <th class="text-center">Documentos</th>
-                <th class="text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`;
+        <table id="tabela-periodos" class="table table-ds table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Período</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Vencimento</th>
+              <th class="text-center">Documentos</th>
+              <th class="text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
 
       dtPeriodos = $("#tabela-periodos").DataTable({
-        language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json" },
-        pageLength: 10,
-        order: [[3, "asc"]],
+        language: DT_PT_BR,
+        autoWidth: false,   // table is display:none on mobile while cards show; avoids garbage measured widths
+        pageLength: prev ? prev.len : 10,
+        order: prev ? prev.order : [[3, "asc"]],
+        search: prev ? { search: prev.search } : undefined,
+        displayStart: prev ? prev.page * prev.len : 0,
+        dom:
+          '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+          '<"row"<"col-sm-12"<"table-responsive table-responsive--stacked"tr>' +
+                                '<"record-cards periodos-cards">>>' +
+          '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         columnDefs: [
           { orderable: false, targets: [4, 5] },
           { searchable: false, targets: [4, 5] },
         ],
+        drawCallback: function () {
+          // Card list mirrors whatever this draw put on screen (current
+          // page, applied search, applied order). Scoped to THIS instance's
+          // own container so a stale/destroyed instance can never write into
+          // a live one — matters because renderPeriodosTable() is re-entrant
+          // (fund switches, status changes) and destroy() + a pending redraw
+          // could otherwise race.
+          const api = this.api();
+          const host = api.table().container().querySelector(".periodos-cards");
+          if (!host) return;
+          const trs = api.rows({ page: "current", search: "applied", order: "applied" })
+                         .nodes().toArray();
+          if (!trs.length) {
+            host.innerHTML = '<p class="text-muted small mb-0 py-3 text-center">Nenhum período encontrado.</p>';
+            return;
+          }
+          host.innerHTML = trs
+            .map(tr => periodosPorId.get(tr.dataset.periodoId))
+            .filter(Boolean)
+            .map(p => buildPeriodoCard(p))
+            .join("");
+        },
       });
     }
 
-    function buildPeriodoRow(p, fundoId) {
+    // Cálculos compartilhados entre a linha da tabela e o card mobile, para
+    // que o sinal de urgência (cor, badge de status/tipo) nunca possa
+    // divergir entre as duas representações do mesmo período.
+    function computePeriodoView(p) {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
@@ -836,7 +1014,7 @@
         anual:        '<span class="badge bg-info text-dark">Anual</span>',
         transitoria:  '<span class="badge bg-secondary">Transitória</span>',
         encerramento: '<span class="badge bg-dark">Encerramento</span>',
-      }[p.tipo] || `<span class="badge bg-secondary">${p.tipo}</span>`;
+      }[p.tipo] || `<span class="badge bg-secondary">${escapeHtml(p.tipo)}</span>`;
 
       const _chv = '<i class="bi bi-chevron-down" style="font-size:.6em;opacity:.75;vertical-align:middle;"></i>';
       const statusBadge = canEnviarBalancete
@@ -877,21 +1055,6 @@
         vencimentoCell = `${dataFmt}${prazoTag}`;
       }
 
-      const verBtn = p.tem_balancete
-        ? `<a href="/dre-resultado/${p.id}/" class="btn btn-sm btn-outline-primary" title="Ver DF">
-             <i class="bi bi-graph-up"></i>
-           </a>`
-        : `<button class="btn btn-sm btn-outline-secondary" disabled title="Sem balancete">
-             <i class="bi bi-graph-up"></i>
-           </button>`;
-
-      const importBtn = canEnviarBalancete
-        ? `<button class="btn btn-sm btn-outline-secondary" title="Importar balancete"
-               onclick="abrirModalImportar(${p.id}, '${escapeHtml(p.nome)}', '${fundoId}')">
-             <i class="bi bi-upload"></i>
-           </button>`
-        : "";
-
       const clSum = p.checklist_summary || {total: 0, recebidos: 0};
       let clBadgeCls = 'bg-secondary';
       if (clSum.total > 0) {
@@ -899,23 +1062,103 @@
                    : clSum.recebidos > 0             ? 'bg-warning text-dark'
                    :                                   'bg-danger';
       }
-      const docBtn = `<button class="btn btn-sm btn-outline-secondary"
+
+      return { tipoBadge, statusBadge, vencimentoCell, rowClass, clSum, clBadgeCls };
+    }
+
+    function buildPeriodoRow(p) {
+      const v = computePeriodoView(p);
+
+      const verBtn = p.tem_balancete
+        ? `<a href="/dre-resultado/${p.id}/" class="btn btn-sm btn-outline-primary" title="Ver DF">
+             <i class="bi bi-graph-up"></i>
+           </a>`
+        : `<button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Sem balancete">
+             <i class="bi bi-graph-up"></i>
+           </button>`;
+
+      const importBtn = canEnviarBalancete
+        ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Importar balancete"
+                    data-df-act="importar">
+             <i class="bi bi-upload"></i>
+           </button>`
+        : "";
+
+      const docBtn = `<button type="button" class="btn btn-sm btn-outline-secondary"
                                data-checklist-pid="${p.id}"
-                               title="Documentos do checklist"
-                               onclick="abrirModalChecklist(${p.id}, '${escapeHtml(p.nome)}')">
+                               data-df-act="checklist"
+                               title="Documentos do checklist">
         <i class="bi bi-card-checklist"></i>
-        <span class="badge ${clBadgeCls} ms-1">${clSum.recebidos}/${clSum.total}</span>
+        <span class="badge ${v.clBadgeCls} ms-1">${v.clSum.recebidos}/${v.clSum.total}</span>
       </button>`;
 
-      return `<tr class="${rowClass}">
+      return `<tr class="${v.rowClass}" data-periodo-id="${p.id}">
         <td class="fw-semibold">${escapeHtml(p.nome)}</td>
-        <td>${tipoBadge}</td>
-        <td>${statusBadge}</td>
-        <td data-order="${p.data_vencimento || ''}">${vencimentoCell}</td>
+        <td>${v.tipoBadge}</td>
+        <td>${v.statusBadge}</td>
+        <td data-order="${p.data_vencimento || ''}">${v.vencimentoCell}</td>
         <td class="text-center">${docBtn}</td>
         <td class="text-center" style="white-space:nowrap;">${verBtn} ${importBtn}</td>
       </tr>`;
     }
+
+    function buildPeriodoCard(p) {
+      const v = computePeriodoView(p);
+      const cardMod = v.rowClass === "table-success" ? "record-card--success"
+                    : v.rowClass === "table-danger"  ? "record-card--danger"
+                    : v.rowClass === "table-warning"  ? "record-card--warning"
+                    : "";
+
+      const verBtn = p.tem_balancete
+        ? `<a href="/dre-resultado/${p.id}/" class="btn btn-sm btn-outline-primary">
+             <i class="bi bi-graph-up me-1"></i>Ver DF
+           </a>`
+        : `<button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+             <i class="bi bi-graph-up me-1"></i>Ver DF
+           </button>`;
+
+      const importBtn = canEnviarBalancete
+        ? `<button type="button" class="btn btn-sm btn-outline-secondary" data-df-act="importar">
+             <i class="bi bi-upload me-1"></i>Importar
+           </button>`
+        : "";
+
+      return `<article class="record-card ${cardMod}" data-periodo-id="${p.id}">
+        <div class="record-card__head">
+          <div class="record-card__title">${escapeHtml(p.nome)}</div>
+          ${v.statusBadge}
+        </div>
+        <dl class="record-card__meta">
+          <dt>Tipo</dt><dd>${v.tipoBadge}</dd>
+          <dt>Vencimento</dt><dd>${v.vencimentoCell}</dd>
+        </dl>
+        <div class="record-card__actions">
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  data-checklist-pid="${p.id}" data-df-act="checklist">
+            <i class="bi bi-card-checklist me-1"></i>Documentos
+            <span class="badge ${v.clBadgeCls} ms-1">${v.clSum.recebidos}/${v.clSum.total}</span>
+          </button>
+          ${verBtn}
+          ${importBtn}
+        </div>
+      </article>`;
+    }
+
+    // Delegação de clique escopada ao container — sobrevive a cada
+    // reescrita de innerHTML e nunca colide com o dropdown de status (que
+    // usa [data-pid] só no <span> do badge, nunca num container).
+    document.getElementById("periodos-table-container").addEventListener("click", function (e) {
+      const trigger = e.target.closest("[data-df-act]");
+      if (!trigger) return;
+      const host = trigger.closest("[data-periodo-id]");
+      const p = host && periodosPorId.get(host.dataset.periodoId);
+      if (!p) return;
+      if (trigger.dataset.dfAct === "checklist") {
+        abrirModalChecklist(p.id, p.nome);
+      } else if (trigger.dataset.dfAct === "importar") {
+        abrirModalImportar(p.id, p.nome, fundoAtual);
+      }
+    });
 
     function formatDate(isoStr) {
       const d = new Date(isoStr + "T00:00:00");
@@ -927,10 +1170,6 @@
         .replace(/&/g, "&amp;").replace(/</g, "&lt;")
         .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
-    }
-
-    function escapeJs(str) {
-      return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     }
 
     function mkFormData(extra) {
@@ -1042,18 +1281,15 @@
       const rowCls = isRecebido ? 'checklist-item-row is-received' : 'checklist-item-row';
       const textCls = isRecebido ? 'checklist-item-text is-done' : 'checklist-item-text';
       const checkbox = canEnviarBalancete
-        ? `<input type="checkbox" class="form-check-input checklist-cb flex-shrink-0" ${checked}
-                  onchange="toggleItemChecklist(${item.id}, this)">`
+        ? `<input type="checkbox" class="form-check-input checklist-cb flex-shrink-0" ${checked} data-cl-act="toggle">`
         : `<input type="checkbox" class="form-check-input checklist-cb flex-shrink-0" ${checked} disabled>`;
       const editBtn = canEnviarBalancete
-        ? `<button class="btn-icon-action"
-                   onclick="iniciarEdicaoItemChecklist(${item.id}, '${escapeJs(item.texto)}')" title="Editar">
+        ? `<button type="button" class="btn-icon-action" data-cl-act="edit" title="Editar">
              <i class="bi bi-pencil"></i>
            </button>`
         : '';
       const delBtn = canEnviarBalancete
-        ? `<button class="btn-icon-action btn-icon-action--danger"
-                   onclick="excluirItemChecklist(${item.id}, '${escapeJs(item.texto)}')" title="Excluir">
+        ? `<button type="button" class="btn-icon-action btn-icon-action--danger" data-cl-act="delete" title="Excluir">
              <i class="bi bi-trash"></i>
            </button>`
         : '';
@@ -1073,7 +1309,35 @@
       </div>`;
     }
 
-    window.toggleItemChecklist = function (itemId, el) {
+    // Delegação de clique/change para as ações do checklist — nenhum texto de
+    // usuário volta a passar por um atributo onclick/onchange (era o vetor de
+    // XSS: escapeJs só escapa \ e ', não ", e o atributo é delimitado por ").
+    // O texto do item é sempre lido de volta do array `checklistItens` em
+    // memória, nunca reconstruído a partir de markup.
+    const checklistItensContainer = document.getElementById("checklist-itens-container");
+
+    checklistItensContainer.addEventListener("change", function (e) {
+      const cb = e.target.closest('[data-cl-act="toggle"]');
+      if (!cb) return;
+      const row = cb.closest("[data-item-id]");
+      if (row) toggleItemChecklist(parseInt(row.dataset.itemId, 10), cb);
+    });
+
+    checklistItensContainer.addEventListener("click", function (e) {
+      const trigger = e.target.closest("[data-cl-act]");
+      if (!trigger || trigger.dataset.clAct === "toggle") return;
+      const row = trigger.closest("[data-item-id]");
+      if (!row) return;
+      const itemId = parseInt(row.dataset.itemId, 10);
+      switch (trigger.dataset.clAct) {
+        case "edit":   iniciarEdicaoItemChecklist(itemId); break;
+        case "delete": excluirItemChecklist(itemId); break;
+        case "save":   salvarEdicaoItemChecklist(itemId); break;
+        case "cancel": cancelarEdicaoItemChecklist(itemId); break;
+      }
+    });
+
+    function toggleItemChecklist(itemId, el) {
       el.disabled = true;
       fetch(`/api/checklist-item/${itemId}/toggle/`, {
         method: 'POST',
@@ -1096,24 +1360,26 @@
       })
       .catch(() => { el.checked = !el.checked; })
       .finally(() => { el.disabled = false; });
-    };
+    }
 
-    window.iniciarEdicaoItemChecklist = function (itemId, textoAtual) {
+    function iniciarEdicaoItemChecklist(itemId) {
+      const cached = checklistItens.find(x => x.id === itemId);
+      const textoAtual = cached ? cached.texto : "";
       const span = document.getElementById(`cl-texto-${itemId}`);
       if (!span) return;
       const row = span.closest('.checklist-item-row');
       const actionsDiv = row && row.querySelector('.checklist-item-actions');
-      if (actionsDiv) actionsDiv.style.visibility = 'hidden';
-      span.outerHTML = `<span class="flex-grow-1 d-flex gap-1 align-items-center" id="cl-edit-wrap-${itemId}">
+      if (actionsDiv) actionsDiv.classList.add('is-editing');
+      span.outerHTML = `<span class="cl-edit-wrap" id="cl-edit-wrap-${itemId}">
         <input type="text" class="form-control form-control-sm" id="cl-input-${itemId}" value="${escapeHtml(textoAtual)}" maxlength="255">
-        <button class="btn btn-success btn-sm" onclick="salvarEdicaoItemChecklist(${itemId})"><i class="bi bi-check-lg"></i></button>
-        <button class="btn btn-secondary btn-sm" onclick="cancelarEdicaoItemChecklist(${itemId}, '${escapeJs(textoAtual)}')"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="btn btn-success btn-sm" data-cl-act="save"><i class="bi bi-check-lg"></i></button>
+        <button type="button" class="btn btn-secondary btn-sm" data-cl-act="cancel"><i class="bi bi-x-lg"></i></button>
       </span>`;
       const inp = document.getElementById(`cl-input-${itemId}`);
       if (inp) { inp.focus(); inp.select(); }
-    };
+    }
 
-    window.salvarEdicaoItemChecklist = function (itemId) {
+    function salvarEdicaoItemChecklist(itemId) {
       const inp = document.getElementById(`cl-input-${itemId}`);
       if (!inp) return;
       const texto = inp.value.trim();
@@ -1137,14 +1403,16 @@
           }
           if (row) {
             const actionsDiv = row.querySelector('.checklist-item-actions');
-            if (actionsDiv) actionsDiv.style.visibility = '';
+            if (actionsDiv) actionsDiv.classList.remove('is-editing');
           }
         }
       })
       .catch(() => {});
-    };
+    }
 
-    window.cancelarEdicaoItemChecklist = function (itemId, textoOriginal) {
+    function cancelarEdicaoItemChecklist(itemId) {
+      const cached = checklistItens.find(x => x.id === itemId);
+      const textoOriginal = cached ? cached.texto : "";
       const wrap = document.getElementById(`cl-edit-wrap-${itemId}`);
       if (!wrap) return;
       const row = wrap.closest('.checklist-item-row');
@@ -1153,11 +1421,13 @@
       wrap.outerHTML = `<span class="checklist-item-text flex-grow-1 ${doneClass}" id="cl-texto-${itemId}">${escapeHtml(textoOriginal)}</span>`;
       if (row) {
         const actionsDiv = row.querySelector('.checklist-item-actions');
-        if (actionsDiv) actionsDiv.style.visibility = '';
+        if (actionsDiv) actionsDiv.classList.remove('is-editing');
       }
-    };
+    }
 
-    window.excluirItemChecklist = function (itemId, texto) {
+    function excluirItemChecklist(itemId) {
+      const cached = checklistItens.find(x => x.id === itemId);
+      const texto = cached ? cached.texto : "";
       if (!confirm(`Excluir o item "${texto}"?`)) return;
       fetch(`/api/checklist-item/${itemId}/excluir/`, {
         method: 'POST',
@@ -1173,7 +1443,7 @@
         }
       })
       .catch(() => {});
-    };
+    }
 
     function atualizarProgressBar(summary) {
       const section = document.getElementById('checklist-progress-section');
@@ -1194,18 +1464,19 @@
     }
 
     function atualizarBadgeChecklist(summary) {
-      const btn = document.querySelector(`[data-checklist-pid="${checklistPeriodoId}"]`);
-      if (btn) {
+      // querySelectorAll, não querySelector: o mesmo período existe duas vezes
+      // no DOM (linha da tabela escondida + card visível no mobile), e as duas
+      // precisam do badge atualizado.
+      document.querySelectorAll(`[data-checklist-pid="${checklistPeriodoId}"]`).forEach(btn => {
         const badge = btn.querySelector('.badge');
-        if (badge) {
-          badge.textContent = `${summary.recebidos}/${summary.total}`;
-          badge.className = 'badge ms-1 ' + (
-            summary.total === 0                  ? 'bg-secondary' :
-            summary.recebidos === summary.total  ? 'bg-success' :
-            summary.recebidos > 0                ? 'bg-warning text-dark' : 'bg-danger'
-          );
-        }
-      }
+        if (!badge) return;
+        badge.textContent = `${summary.recebidos}/${summary.total}`;
+        badge.className = 'badge ms-1 ' + (
+          summary.total === 0                  ? 'bg-secondary' :
+          summary.recebidos === summary.total  ? 'bg-success' :
+          summary.recebidos > 0                ? 'bg-warning text-dark' : 'bg-danger'
+        );
+      });
       if (fundoAtual && periodosPorFundo[fundoAtual]) {
         const p = periodosPorFundo[fundoAtual].find(x => x.id === checklistPeriodoId);
         if (p) p.checklist_summary = summary;
@@ -1310,6 +1581,7 @@
   };
   const _sd = (() => {
     const el = document.createElement('div');
+    el.className = 'sd-menu';
     el.style.cssText = 'display:none;position:fixed;z-index:9999;min-width:175px;padding:4px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.25);background:var(--surface-2);border:1px solid var(--border-color);';
     document.body.appendChild(el);
     return el;
@@ -1319,6 +1591,8 @@
   document.addEventListener('click', e => {
     const badge = e.target.closest('[data-pid]');
     if (badge) { e.stopPropagation(); _openSd(badge); return; }
+    const opt = e.target.closest('[data-sd-status]');
+    if (opt) { _selectSd(opt.dataset.sdStatus); return; }
     if (!_sd.contains(e.target)) _closeSd();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') _closeSd(); });
@@ -1328,13 +1602,21 @@
     const opts = _SD_OPTS[trigger.dataset.status] || [];
     _sd.innerHTML = opts.map(s => {
       const c = _SD_CFG[s];
-      return `<button type="button" style="display:flex;align-items:center;width:100%;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:5px;gap:8px;" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='none'" onclick="_selectSd('${s}')"><span class="badge ${c.cls}" style="${c.style}font-size:.78em;">${c.label}</span></button>`;
+      return `<button type="button" class="sd-menu__item" data-sd-status="${s}"><span class="badge ${c.cls}" style="${c.style}font-size:.78em;">${c.label}</span></button>`;
     }).join('');
     const r = trigger.getBoundingClientRect();
     _sd.style.display = 'block';
+    const sdW = _sd.offsetWidth;
     const sdH = _sd.offsetHeight;
-    _sd.style.left = r.left + 'px';
-    _sd.style.top  = (window.innerHeight - r.bottom > sdH + 8) ? (r.bottom + 4) + 'px' : (r.top - sdH - 4) + 'px';
+    const M = 8; // margem mínima da borda da tela
+    // clientWidth exclui a barra de rolagem; sem isso o menu podia abrir
+    // parcialmente fora da tela quando o gatilho (ex: badge alinhado à
+    // direita num card mobile) está perto da borda direita do viewport.
+    const vw = document.documentElement.clientWidth;
+    _sd.style.left = Math.round(Math.max(M, Math.min(r.left, vw - sdW - M))) + 'px';
+    _sd.style.top  = (window.innerHeight - r.bottom > sdH + M)
+      ? (r.bottom + 4) + 'px'
+      : Math.max(M, r.top - sdH - 4) + 'px';
   }
 
   function _selectSd(novoStatus) {
@@ -1348,45 +1630,12 @@
     })
     .then(r => r.json())
     .then(data => {
-      if (data.ok) {
-        const badge = document.querySelector(`[data-pid="${_sdPid}"]`);
-        if (badge) {
-          const c = _SD_CFG[novoStatus];
-          const chv = '<i class="bi bi-chevron-down" style="font-size:.6em;opacity:.75;vertical-align:middle;"></i>';
-          badge.className = 'badge ' + c.cls;
-          badge.setAttribute('style', c.style + 'cursor:pointer;');
-          badge.dataset.status = novoStatus;
-          badge.innerHTML = c.label + ' ' + chv;
-
-          // Atualiza célula Vencimento e cor da linha sem reload
-          const row = badge.closest('tr');
-          if (row) {
-            const tds = row.querySelectorAll('td');
-            const vencTd = tds[3];
-            if (vencTd && vencTd.dataset.order) {
-              const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-              const venc = new Date(vencTd.dataset.order + 'T00:00:00');
-              const dias = Math.round((venc - hoje) / 86400000);
-              const dataFmt = venc.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-              let prazoTag = '';
-
-              row.classList.remove('table-success', 'table-danger', 'table-warning');
-              if (novoStatus === 'finalizada') {
-                row.classList.add('table-success');
-              } else if (novoStatus === 'vencida' || dias < 0) {
-                row.classList.add('table-danger');
-                prazoTag = `<span class="badge bg-danger ms-2">${Math.abs(dias)}d atraso</span>`;
-              } else if (dias <= 7) {
-                row.classList.add('table-warning');
-                prazoTag = `<span class="badge bg-danger ms-2">${dias}d</span>`;
-              } else if (dias <= 30) {
-                prazoTag = `<span class="badge bg-warning text-dark ms-2">${dias}d</span>`;
-              }
-              vencTd.innerHTML = dataFmt + prazoTag;
-            }
-          }
-        }
-      }
+      // Recarrega a partir da API em vez de editar a linha/card no braço —
+      // isso mantém tabela e cards sincronizados sem duplicar a lógica de
+      // cor/vencimento (já centralizada em computePeriodoView), e evita o
+      // `badge.closest('tr')` que retornava null quando o badge estava
+      // dentro de um card em vez de uma <tr>.
+      if (data.ok) document.dispatchEvent(new CustomEvent('df:periodo-atualizado'));
       _closeSd();
     })
     .catch(_closeSd);
@@ -1416,8 +1665,8 @@
     document.querySelector("#modal-importar input[name='arquivo_balancete']").value = "";
 
     // Popular clone dropdown com os períodos que já têm balancete
-    const periodosPorFundo = {{ fundos_periodos|safe }};
-    const periodos    = periodosPorFundo[fundoId] || [];
+    // (reads the SAME live object refreshPeriodos() mutates — no more stale snapshot)
+    const periodos    = DF_PERIODOS[fundoId] || [];
     const comBalancete = periodos.filter(p => p.tem_balancete && p.id !== parseInt(periodoId));
 
     const select = document.getElementById("select-periodo-anterior");

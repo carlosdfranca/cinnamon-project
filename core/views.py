@@ -131,8 +131,8 @@ def demonstracao_financeira(request):
     return render(request, "demonstracao_financeira.html", {
         "fundos": fundos,
         "gestoras": gestoras,
-        "fundos_periodos": json.dumps(fundos_periodos),
-        "fundos_prazos": json.dumps(fundos_prazos),
+        "fundos_periodos": fundos_periodos,
+        "fundos_prazos": fundos_prazos,
         "can_enviar_balancete": _can_manage_fundos(request),
     })
 

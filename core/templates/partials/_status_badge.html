@@ -1,0 +1,21 @@
+{% comment %}
+Renders a Convite status as a status pill.
+Usage: {% include 'partials/_status_badge.html' with status=convite.status %}
+{% endcomment %}
+{% if status == 'PENDING' %}
+  <span class="status-badge status-badge--pending">
+    <i class="bi bi-clock"></i> Pendente
+  </span>
+{% elif status == 'ACCEPTED' %}
+  <span class="status-badge status-badge--accepted">
+    <i class="bi bi-check-circle-fill"></i> Aceito
+  </span>
+{% elif status == 'EXPIRED' %}
+  <span class="status-badge status-badge--expired">
+    <i class="bi bi-x-circle-fill"></i> Expirado
+  </span>
+{% elif status == 'CANCELLED' %}
+  <span class="status-badge status-badge--cancelled">
+    <i class="bi bi-dash-circle-fill"></i> Cancelado
+  </span>
+{% endif %}

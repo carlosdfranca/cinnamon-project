@@ -72,45 +72,114 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ===============================
-    // Mobile menu hamburger toggle
+    // Mobile drawer (hamburger) menu
     // ===============================
     const mobileToggle = document.querySelector('.site-nav__toggle');
     const mobileMenu = document.querySelector('.site-nav__links');
-    
+    const mobileBackdrop = document.querySelector('.site-nav__backdrop');
+    const mobileClose = document.querySelector('.site-nav__drawer-close');
+    const DRAWER_BREAKPOINT = 1200; // keep in sync with the CSS max-width: 1199.98px cutover
+    const BACKDROP_TRANSITION_MS = 250;
+
     if (mobileToggle && mobileMenu) {
-        mobileToggle.addEventListener('click', function(e) {
+        const isMobile = () => window.innerWidth < DRAWER_BREAKPOINT;
+        const isDrawerOpen = () => mobileMenu.classList.contains('is-open');
+        const getFocusable = () => mobileMenu.querySelectorAll(
+            'a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])'
+        );
+
+        function syncInert() {
+            if (isMobile() && !isDrawerOpen()) {
+                mobileMenu.setAttribute('inert', '');
+            } else {
+                mobileMenu.removeAttribute('inert');
+            }
+        }
+
+        function openDrawer() {
+            mobileMenu.classList.add('is-open');
+            mobileMenu.removeAttribute('inert');
+            mobileToggle.setAttribute('aria-expanded', 'true');
+            const icon = mobileToggle.querySelector('i');
+            if (icon) icon.className = 'bi bi-x-lg';
+            document.body.classList.add('site-nav-open');
+            if (mobileBackdrop) {
+                mobileBackdrop.hidden = false;
+                requestAnimationFrame(() => mobileBackdrop.classList.add('is-open'));
+            }
+            const focusable = getFocusable();
+            if (focusable.length) focusable[0].focus();
+        }
+
+        function closeDrawer(options) {
+            const returnFocus = !options || options.returnFocus !== false;
+            mobileMenu.classList.remove('is-open');
+            mobileToggle.setAttribute('aria-expanded', 'false');
+            const icon = mobileToggle.querySelector('i');
+            if (icon) icon.className = 'bi bi-list';
+            document.body.classList.remove('site-nav-open');
+            if (mobileBackdrop) {
+                mobileBackdrop.classList.remove('is-open');
+                setTimeout(function () { mobileBackdrop.hidden = true; }, BACKDROP_TRANSITION_MS);
+            }
+            syncInert();
+            if (returnFocus) mobileToggle.focus();
+        }
+
+        mobileToggle.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            const isOpen = mobileMenu.classList.contains('is-open');
-            
-            if (isOpen) {
-                mobileMenu.classList.remove('is-open');
-                mobileToggle.setAttribute('aria-expanded', 'false');
+            if (isDrawerOpen()) {
+                closeDrawer({ returnFocus: false });
             } else {
-                mobileMenu.classList.add('is-open');
-                mobileToggle.setAttribute('aria-expanded', 'true');
+                openDrawer();
             }
         });
-        
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(e) {
-            if (mobileMenu.classList.contains('is-open')) {
-                if (!mobileToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
-                    mobileMenu.classList.remove('is-open');
-                    mobileToggle.setAttribute('aria-expanded', 'false');
-                }
+
+        if (mobileClose) {
+            mobileClose.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeDrawer();
+            });
+        }
+
+        if (mobileBackdrop) {
+            mobileBackdrop.addEventListener('click', function () {
+                closeDrawer();
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isDrawerOpen()) {
+                closeDrawer();
             }
         });
-        
-        // Close mobile menu on window resize if getting larger
-        let lastWidth = window.innerWidth;
-        window.addEventListener('resize', function() {
-            const currentWidth = window.innerWidth;
-            if (currentWidth > 768 && lastWidth <= 768) {
-                mobileMenu.classList.remove('is-open');
-                mobileToggle.setAttribute('aria-expanded', 'false');
+
+        // Trap Tab focus inside the open drawer
+        mobileMenu.addEventListener('keydown', function (e) {
+            if (e.key !== 'Tab' || !isDrawerOpen()) return;
+            const focusable = Array.from(getFocusable());
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
             }
-            lastWidth = currentWidth;
         });
+
+        // Keep drawer/inert state clean across resizes (desktop <-> mobile)
+        window.addEventListener('resize', function () {
+            if (!isMobile() && isDrawerOpen()) {
+                closeDrawer({ returnFocus: false });
+            } else {
+                syncInert();
+            }
+        });
+
+        syncInert();
     }
 });
